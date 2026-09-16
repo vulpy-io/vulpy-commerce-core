@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+
+# Ensure pnpm is on PATH even in minimal hook environments (containers, IDEs,
+# GUI clients) where corepack shims or the pnpm home aren't exported.
+if ! command -v pnpm >/dev/null 2>&1; then
+    for _d in /usr/lib/node_modules/corepack/shims "$HOME/.local/share/pnpm" "$HOME/Library/pnpm"; do
+        if [ -d "$_d" ]; then
+            PATH="$_d:$PATH"
+            export PATH
+            break
+        fi
+    done
+fi
+
+pnpm exec lint-staged

@@ -1,0 +1,30 @@
+/* Vulpy Commerce — shared design tokens + utilities.
+ *
+ * Loaded FIRST in the vulpy-commerce manifest `stylesheets` array so every
+ * feature (and same-origin custom page) can use the --vc-* tokens.
+ * Scoped to [data-vc] roots only — no global resets, no element selectors.
+ */
+
+[data-vc] {
+  --vc-accent: #e5484d;          /* Vulpy Commerce accent */
+  --vc-accent-contrast: #ffffff;
+  --vc-bg: #1a1d24;              /* drawer / page background */
+  --vc-bg-elevated: #232833;     /* header, tabs, cards */
+  --vc-border: #333a47;
+  --vc-text: #e8eaf0;
+  --vc-text-muted: #9aa3b2;
+  --vc-env-dev: #19381F;         /* green — dev environment */
+  --vc-env-staging: #AB3C00;     /* amber — staging environment */
+  --vc-env-live: #760521;        /* red — live environment */
+  --vc-radius: 10px;
+  --vc-radius-sm: 6px;
+  --vc-space-1: 4px;
+  --vc-space-2: 8px;
+  --vc-space-3: 12px;
+  --vc-space-4: 16px;
+  --vc-space-5: 24px;
+  --vc-z-panel: 2147483000;
+  --vc-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --vc-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

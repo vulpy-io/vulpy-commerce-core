@@ -1,0 +1,176 @@
+name: Release Images (Core + Pro Fox)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+concurrency:
+  group: release-images-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release tree
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Prepare public image contexts
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/dist/core" "$RUNNER_TEMP/dist/pro"
+          # Release tooling is intentionally never shipped. Each release repo
+          # builds only its own image from its own exact tag; this avoids
+          # cross-private-repo credentials and mirrors the public split.
+          if [[ "$GITHUB_REPOSITORY" == "vulpy-io/vulpy-commerce-core" ]]; then
+            rsync -a --exclude '/.git' "$GITHUB_WORKSPACE/" "$RUNNER_TEMP/dist/core/"
+            test -f "$RUNNER_TEMP/dist/core/Dockerfile.hermes"
+          else
+            rsync -a --exclude '/.git' "$GITHUB_WORKSPACE/" "$RUNNER_TEMP/dist/pro/"
+            test -f "$RUNNER_TEMP/dist/pro/Dockerfile.hermes"
+            test -f "$RUNNER_TEMP/dist/pro/distribution/edition.json"
+            test -d "$RUNNER_TEMP/dist/pro/distribution/packages/starter-pack"
+            test -d "$RUNNER_TEMP/dist/pro/distribution/packages/multi-agent-pack"
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Metadata (core -> public)
+        if: github.repository == 'vulpy-io/vulpy-commerce-core'
+        id: meta-core
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/vulpy-io/vulpy-hermes-core
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+
+      - name: Build core image (load for gate)
+        if: github.repository == 'vulpy-io/vulpy-commerce-core'
+        id: build-core
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ runner.temp }}/dist/core
+          file: Dockerfile.hermes
+          build-args: |
+            VULPY_EDITION=core
+          tags: ${{ steps.meta-core.outputs.tags }}
+          push: false
+          load: true
+          cache-from: type=gha,scope=vulpy-hermes-core
+          cache-to: type=gha,scope=vulpy-hermes-core,mode=max
+
+      - name: Gate core image content
+        if: github.repository == 'vulpy-io/vulpy-commerce-core'
+        run: |
+          set -euo pipefail
+          IMG="ghcr.io/vulpy-io/vulpy-hermes-core:${{ steps.meta-core.outputs.version }}"
+          features="$(docker run --rm --entrypoint sh "$IMG" -c 'ls /app/fox-overlay/webui_static/features/')"
+          expected=(
+            "vulpy-commerce-core"
+            "vulpy-commerce-welcome"
+            "vulpy-commerce-side-panel"
+            "vulpy-commerce-env-context"
+            "vulpy-commerce-env-actions"
+            "vulpy-commerce-profile-switcher"
+          )
+          for f in "${expected[@]}"; do
+            if ! echo "$features" | grep -qx "$f"; then
+              echo "::error::Core image missing expected feature: $f"
+              exit 1
+            fi
+          done
+          if [ "$(echo "$features" | grep -c .)" -ne "${#expected[@]}" ]; then
+            echo "::error::Core image has unexpected extra features. Got:"
+            echo "$features"
+            exit 1
+          fi
+          pkgs="$(docker run --rm --entrypoint sh "$IMG" -c 'find /opt/vulpy/packages -mindepth 1 ! -name .gitkeep 2>/dev/null')"
+          if [ -n "$pkgs" ]; then
+            echo "::error::Core must not ship package payloads under /opt/vulpy/packages. Found:"
+            echo "$pkgs"
+            exit 1
+          fi
+          echo "Core image gate passed: 6 features, no package payloads."
+
+      - name: Publish core image (public)
+        if: github.repository == 'vulpy-io/vulpy-commerce-core'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ runner.temp }}/dist/core
+          file: Dockerfile.hermes
+          build-args: |
+            VULPY_EDITION=core
+          tags: ${{ steps.meta-core.outputs.tags }}
+          push: true
+          cache-from: type=gha,scope=vulpy-hermes-core
+
+      - name: Metadata (pro -> private)
+        if: github.repository == 'vulpy-io/vulpy-commerce-pro'
+        id: meta-pro
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/vulpy-io/vulpy-hermes-pro
+          tags: |
+            type=semver,pattern={{version}}
+
+      - name: Build pro image (load for gate)
+        if: github.repository == 'vulpy-io/vulpy-commerce-pro'
+        id: build-pro
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ runner.temp }}/dist/pro
+          file: Dockerfile.hermes
+          build-args: |
+            VULPY_EDITION=pro
+          tags: ${{ steps.meta-pro.outputs.tags }}
+          push: false
+          load: true
+          cache-from: type=gha,scope=vulpy-hermes-pro
+          cache-to: type=gha,scope=vulpy-hermes-pro,mode=max
+
+      - name: Gate pro image content
+        if: github.repository == 'vulpy-io/vulpy-commerce-pro'
+        run: |
+          set -euo pipefail
+          IMG="ghcr.io/vulpy-io/vulpy-hermes-pro:${{ steps.meta-pro.outputs.version }}"
+          features="$(docker run --rm --entrypoint sh "$IMG" -c 'ls /app/fox-overlay/webui_static/features/')"
+          for f in vulpy-commerce-core vulpy-commerce-welcome vulpy-commerce-side-panel vulpy-commerce-env-context vulpy-commerce-env-actions vulpy-commerce-profile-switcher; do
+            if ! echo "$features" | grep -qx "$f"; then
+              echo "::error::Pro image missing feature: $f"
+              exit 1
+            fi
+          done
+          for p in starter-pack multi-agent-pack; do
+            if ! docker run --rm --entrypoint sh "$IMG" -c "test -d /opt/vulpy/packages/$p"; then
+              echo "::error::Pro image missing package: /opt/vulpy/packages/$p"
+              exit 1
+            fi
+          done
+          echo "Pro image gate passed: 6 features + starter-pack + multi-agent-pack."
+
+      - name: Publish pro image (private)
+        if: github.repository == 'vulpy-io/vulpy-commerce-pro'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ runner.temp }}/dist/pro
+          file: Dockerfile.hermes
+          build-args: |
+            VULPY_EDITION=pro
+          tags: ${{ steps.meta-pro.outputs.tags }}
+          push: true
+          cache-from: type=gha,scope=vulpy-hermes-pro

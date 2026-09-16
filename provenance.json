@@ -1,0 +1,9 @@
+{
+  "product": "vulpy-commerce",
+  "edition": "core",
+  "exporter": "scripts/lib/release-export.mjs",
+  "artifactTool": "scripts/lib/release-artifacts.mjs",
+  "sourceRevision": "v1.0.0-source",
+  "exportedAt": "2026-09-16T10:43:43.498Z",
+  "resolvedPackages": []
+}

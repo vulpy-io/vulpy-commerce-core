@@ -1,0 +1,5 @@
+name: vulpy-provider
+kind: model-provider
+version: 1.0.0
+description: Vulpy Commerce LLM gateway (LiteLLM proxy)
+author: Vulpy Commerce

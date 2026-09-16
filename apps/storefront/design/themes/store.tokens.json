@@ -1,0 +1,186 @@
+{
+  "$description": "Per-store override layer — Fox in the Box brand: warm cream + charcoal surfaces, muted taupe accent from foxinthebox.io, orange CTA from logo. Typography: Sora (display) + Manrope (body), inverse weight hierarchy, 4px grid.",
+  "reference": {
+    "color": {
+      "brand": {
+        "50": {
+          "$type": "color",
+          "$value": "#f7f2e9",
+          "$description": "Lightest brand tint (Fox primary bg hover)"
+        },
+        "100": {
+          "$type": "color",
+          "$value": "#ebe5dd",
+          "$description": "Light brand tint"
+        },
+        "300": {
+          "$type": "color",
+          "$value": "#c4bbb1",
+          "$description": "Brand light accent / hover"
+        },
+        "500": {
+          "$type": "color",
+          "$value": "#b8a089",
+          "$description": "Primary brand colour — warm taupe accent from Fox in the Box site"
+        },
+        "700": {
+          "$type": "color",
+          "$value": "#917964",
+          "$description": "Brand active / darker shade"
+        },
+        "900": {
+          "$type": "color",
+          "$value": "#1f1612",
+          "$description": "Deepest brand shade"
+        }
+      },
+      "highlight": {
+        "500": {
+          "$type": "color",
+          "$value": "#c8743a",
+          "$description": "Focus ring and selected state — Fox logo orange (distinct from brand accent)"
+        }
+      },
+      "neutral": {
+        "50": {
+          "$type": "color",
+          "$value": "#fbf9f4",
+          "$description": "Warm cream canvas (foxinthebox.io background)"
+        },
+        "100": {
+          "$type": "color",
+          "$value": "#f2f0eb",
+          "$description": "Warm fill tertiary"
+        },
+        "200": {
+          "$type": "color",
+          "$value": "#edebe6",
+          "$description": "Warm fill secondary / border-secondary"
+        },
+        "300": {
+          "$type": "color",
+          "$value": "#d9d7d2",
+          "$description": "Warm border / fill primary"
+        },
+        "500": {
+          "$type": "color",
+          "$value": "#94928f",
+          "$description": "Muted text tertiary (warm gray)"
+        },
+        "600": {
+          "$type": "color",
+          "$value": "#676562",
+          "$description": "Text secondary"
+        },
+        "700": {
+          "$type": "color",
+          "$value": "#32302e",
+          "$description": "Text primary (Fox colorText)"
+        },
+        "800": {
+          "$type": "color",
+          "$value": "#171513",
+          "$description": "Charcoal — surface-strong and body text (foxinthebox.io)"
+        },
+        "950": {
+          "$type": "color",
+          "$value": "#171513",
+          "$description": "Deepest neutral"
+        }
+      }
+    },
+    "font": {
+      "family": {
+        "body": {
+          "$type": "fontFamily",
+          "$value": ["Manrope Variable", "Manrope", "Segoe UI", "sans-serif"]
+        },
+        "heading": {
+          "$type": "fontFamily",
+          "$value": ["Sora Variable", "Sora", "Segoe UI", "sans-serif"]
+        }
+      },
+      "weight": {
+        "light": {
+          "$type": "fontWeight",
+          "$value": 320,
+          "$description": "Display/h1 — ultra-light; large type needs less weight to command attention"
+        },
+        "regular": {
+          "$type": "fontWeight",
+          "$value": 450,
+          "$description": "Body text — slightly bolder than standard 400 for warmth"
+        },
+        "medium": {
+          "$type": "fontWeight",
+          "$value": 500,
+          "$description": "h3, h5, feature text"
+        },
+        "semibold": {
+          "$type": "fontWeight",
+          "$value": 600,
+          "$description": "h4/card titles, overlines, UI emphasis"
+        },
+        "bold": {
+          "$type": "fontWeight",
+          "$value": 700
+        },
+        "button": {
+          "$type": "fontWeight",
+          "$value": 800,
+          "$description": "CTA buttons — very bold, intentional contrast against body"
+        }
+      }
+    },
+    "radius": {
+      "control": {
+        "$type": "dimension",
+        "$value": { "value": 5, "unit": "px" },
+        "$description": "Buttons, inputs — Fox uses only two radii"
+      },
+      "panel": {
+        "$type": "dimension",
+        "$value": { "value": 10, "unit": "px" },
+        "$description": "Cards, images, panels — Fox's larger radius"
+      }
+    }
+  },
+  "semantic": {
+    "color": {
+      "action": {
+        "primary": {
+          "background": {
+            "$type": "color",
+            "$value": "#c8743a",
+            "$description": "Fox logo orange — CTAs use the warmer, more energetic orange distinct from the taupe brand accent"
+          },
+          "hover": {
+            "$type": "color",
+            "$value": "#a15427",
+            "$description": "Fox link active / CTA hover"
+          },
+          "foreground": {
+            "$type": "color",
+            "$value": "#ffffff"
+          }
+        },
+        "secondary": {
+          "hover": {
+            "$type": "color",
+            "$value": "#f7f2e9",
+            "$description": "Secondary button hover — lightest brand tint"
+          }
+        }
+      }
+    }
+  },
+  "component": {
+    "footer": {
+      "background": {
+        "$type": "color",
+        "$value": "#eae3d9",
+        "$description": "Footer surface — foxinthebox.io footer (taupe 25% over cream, solid blend)"
+      }
+    }
+  }
+}

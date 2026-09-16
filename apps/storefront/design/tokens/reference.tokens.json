@@ -1,0 +1,448 @@
+{
+  "reference": {
+    "$description": "Primitive values. Application code must consume semantic or component aliases instead.",
+    "color": {
+      "brand": {
+        "50": {
+          "$type": "color",
+          "$value": "#f5e6ee"
+        },
+        "100": {
+          "$type": "color",
+          "$value": "#e5ccdd"
+        },
+        "300": {
+          "$type": "color",
+          "$value": "#b36688"
+        },
+        "500": {
+          "$type": "color",
+          "$value": "#860044"
+        },
+        "700": {
+          "$type": "color",
+          "$value": "#6b003e"
+        },
+        "900": {
+          "$type": "color",
+          "$value": "#440024"
+        }
+      },
+      "neutral": {
+        "0": {
+          "$type": "color",
+          "$value": "#ffffff"
+        },
+        "50": {
+          "$type": "color",
+          "$value": "#f9fafb"
+        },
+        "100": {
+          "$type": "color",
+          "$value": "#f3f4f6"
+        },
+        "200": {
+          "$type": "color",
+          "$value": "#e5e7eb"
+        },
+        "300": {
+          "$type": "color",
+          "$value": "#d1d5db"
+        },
+        "500": {
+          "$type": "color",
+          "$value": "#8d93a5"
+        },
+        "600": {
+          "$type": "color",
+          "$value": "#606882"
+        },
+        "700": {
+          "$type": "color",
+          "$value": "#4f4f4f"
+        },
+        "800": {
+          "$type": "color",
+          "$value": "#333333"
+        },
+        "950": {
+          "$type": "color",
+          "$value": "#171717"
+        }
+      },
+      "danger": {
+        "50": {
+          "$type": "color",
+          "$value": "#feebeb"
+        },
+        "500": {
+          "$type": "color",
+          "$value": "#b60802"
+        },
+        "700": {
+          "$type": "color",
+          "$value": "#850502"
+        }
+      },
+      "success": {
+        "50": {
+          "$type": "color",
+          "$value": "#daf8e6"
+        },
+        "500": {
+          "$type": "color",
+          "$value": "#22ad5c"
+        },
+        "700": {
+          "$type": "color",
+          "$value": "#1a8245"
+        }
+      },
+      "warning": {
+        "50": {
+          "$type": "color",
+          "$value": "#fffbeb"
+        },
+        "500": {
+          "$type": "color",
+          "$value": "#fbbf24"
+        },
+        "700": {
+          "$type": "color",
+          "$value": "#d97706"
+        }
+      },
+      "highlight": {
+        "500": {
+          "$type": "color",
+          "$value": "#ccd74d"
+        }
+      }
+    },
+    "font": {
+      "family": {
+        "body": {
+          "$type": "fontFamily",
+          "$value": [
+            "var(--font-manrope)",
+            "Manrope Variable",
+            "Manrope",
+            "Segoe UI",
+            "sans-serif"
+          ]
+        },
+        "heading": {
+          "$type": "fontFamily",
+          "$value": [
+            "var(--font-sora)",
+            "Sora Variable",
+            "Sora",
+            "Segoe UI",
+            "sans-serif"
+          ]
+        }
+      },
+      "weight": {
+        "light": {
+          "$type": "fontWeight",
+          "$value": 320,
+          "$description": "Display/h1 — ultra-light; large type relies on size, not weight, for hierarchy"
+        },
+        "regular": {
+          "$type": "fontWeight",
+          "$value": 450,
+          "$description": "Body text — slightly bolder than standard 400 for warmth and legibility"
+        },
+        "medium": {
+          "$type": "fontWeight",
+          "$value": 500,
+          "$description": "h3, h5, feature text"
+        },
+        "semibold": {
+          "$type": "fontWeight",
+          "$value": 600,
+          "$description": "h4/card titles, overlines, UI emphasis"
+        },
+        "bold": {
+          "$type": "fontWeight",
+          "$value": 700
+        },
+        "button": {
+          "$type": "fontWeight",
+          "$value": 800,
+          "$description": "CTA buttons — very bold, intentional contrast against body weight"
+        }
+      },
+      "size": {
+        "xs": {
+          "$type": "dimension",
+          "$value": { "value": 12, "unit": "px" },
+          "$description": "Fine print, legal"
+        },
+        "overline": {
+          "$type": "dimension",
+          "$value": { "value": 13, "unit": "px" },
+          "$description": "Labels, badges, eyebrows"
+        },
+        "caption": {
+          "$type": "dimension",
+          "$value": { "value": 14, "unit": "px" },
+          "$description": "Metadata, timestamps"
+        },
+        "body-sm": {
+          "$type": "dimension",
+          "$value": { "value": 15, "unit": "px" },
+          "$description": "Secondary body, button labels"
+        },
+        "body": {
+          "$type": "dimension",
+          "$value": { "value": 16, "unit": "px" },
+          "$description": "Default body text"
+        },
+        "body-lg": {
+          "$type": "dimension",
+          "$value": { "value": 20, "unit": "px" },
+          "$description": "Feature text, lead paragraphs"
+        },
+        "h5": {
+          "$type": "dimension",
+          "$value": { "value": 22, "unit": "px" },
+          "$description": "Subtitle, widget heading"
+        },
+        "h4": {
+          "$type": "dimension",
+          "$value": { "value": 24, "unit": "px" },
+          "$description": "Card heading"
+        },
+        "h3": {
+          "$type": "dimension",
+          "$value": { "value": 28, "unit": "px" },
+          "$description": "Section subheading (switches to body font)"
+        },
+        "h2": {
+          "$type": "dimension",
+          "$value": { "value": 32, "unit": "px" },
+          "$description": "Section heading"
+        },
+        "h1": {
+          "$type": "dimension",
+          "$value": { "value": 48, "unit": "px" },
+          "$description": "Display / hero headline"
+        }
+      },
+      "lineHeight": {
+        "display": {
+          "$type": "number",
+          "$value": 1.4,
+          "$description": "h1 — generous for large light type (48px × 1.4 = 67.2px)"
+        },
+        "heading": {
+          "$type": "number",
+          "$value": 1.25,
+          "$description": "h2 (32px × 1.25 = 40px ✓ 4px grid)"
+        },
+        "subheading": {
+          "$type": "number",
+          "$value": 1.357,
+          "$description": "h3 (28px × 1.357 = 38px)"
+        },
+        "card": {
+          "$type": "number",
+          "$value": 1.333,
+          "$description": "h4 (24px × 1.333 = 32px ✓ 4px grid)"
+        },
+        "body": {
+          "$type": "number",
+          "$value": 1.625,
+          "$description": "Default body (16px × 1.625 = 26px)"
+        },
+        "body-tight": {
+          "$type": "number",
+          "$value": 1.6,
+          "$description": "body-sm, buttons (15px × 1.6 = 24px ✓ 4px grid)"
+        },
+        "caption": {
+          "$type": "number",
+          "$value": 1.571,
+          "$description": "14px caption (14px × 1.571 = 22px)"
+        }
+      },
+      "letterSpacing": {
+        "display": {
+          "$type": "string",
+          "$value": "-0.0146em",
+          "$description": "h1 — tightens at large sizes"
+        },
+        "section": {
+          "$type": "string",
+          "$value": "-0.0375em",
+          "$description": "h2 — aggressive tightening for Sora at 32px"
+        },
+        "subheading": {
+          "$type": "string",
+          "$value": "0.0018em",
+          "$description": "h3 — slight expansion for Manrope at 28px"
+        },
+        "card": {
+          "$type": "string",
+          "$value": "0.0021em",
+          "$description": "h4"
+        },
+        "body": {
+          "$type": "string",
+          "$value": "0.009em",
+          "$description": "Default body — widens slightly for readability"
+        },
+        "overline": {
+          "$type": "string",
+          "$value": "0.00625em",
+          "$description": "Labels, badges"
+        },
+        "none": {
+          "$type": "string",
+          "$value": "0em",
+          "$description": "Buttons, h5"
+        }
+      }
+    },
+    "space": {
+      "0": {
+        "$type": "dimension",
+        "$value": { "value": 0, "unit": "px" }
+      },
+      "1": {
+        "$type": "dimension",
+        "$value": { "value": 4, "unit": "px" },
+        "$description": "Base unit (4px grid)"
+      },
+      "2": {
+        "$type": "dimension",
+        "$value": { "value": 8, "unit": "px" }
+      },
+      "3": {
+        "$type": "dimension",
+        "$value": { "value": 12, "unit": "px" }
+      },
+      "4": {
+        "$type": "dimension",
+        "$value": { "value": 16, "unit": "px" }
+      },
+      "5": {
+        "$type": "dimension",
+        "$value": { "value": 20, "unit": "px" }
+      },
+      "6": {
+        "$type": "dimension",
+        "$value": { "value": 24, "unit": "px" },
+        "$description": "Grid gutter"
+      },
+      "7": {
+        "$type": "dimension",
+        "$value": { "value": 28, "unit": "px" }
+      },
+      "8": {
+        "$type": "dimension",
+        "$value": { "value": 32, "unit": "px" }
+      },
+      "9": {
+        "$type": "dimension",
+        "$value": { "value": 36, "unit": "px" }
+      },
+      "10": {
+        "$type": "dimension",
+        "$value": { "value": 40, "unit": "px" }
+      },
+      "12": {
+        "$type": "dimension",
+        "$value": { "value": 48, "unit": "px" },
+        "$description": "Section spacing (small)"
+      },
+      "14": {
+        "$type": "dimension",
+        "$value": { "value": 56, "unit": "px" }
+      },
+      "15": {
+        "$type": "dimension",
+        "$value": { "value": 60, "unit": "px" },
+        "$description": "Section spacing (medium)"
+      },
+      "28": {
+        "$type": "dimension",
+        "$value": { "value": 112, "unit": "px" },
+        "$description": "Hero top spacing"
+      },
+      "32": {
+        "$type": "dimension",
+        "$value": { "value": 128, "unit": "px" },
+        "$description": "Hero section (large)"
+      }
+    },
+    "radius": {
+      "none": {
+        "$type": "dimension",
+        "$value": { "value": 0, "unit": "px" }
+      },
+      "sm": {
+        "$type": "dimension",
+        "$value": { "value": 4, "unit": "px" }
+      },
+      "md": {
+        "$type": "dimension",
+        "$value": { "value": 8, "unit": "px" }
+      },
+      "lg": {
+        "$type": "dimension",
+        "$value": { "value": 12, "unit": "px" }
+      },
+      "pill": {
+        "$type": "dimension",
+        "$value": { "value": 999, "unit": "px" }
+      },
+      "control": {
+        "$type": "dimension",
+        "$value": { "value": 5, "unit": "px" },
+        "$description": "Buttons and inputs — Fox uses 5px for interactive elements"
+      },
+      "panel": {
+        "$type": "dimension",
+        "$value": { "value": 10, "unit": "px" },
+        "$description": "Cards, images, containers — Fox uses 10px for panels"
+      },
+      "badge": {
+        "$type": "dimension",
+        "$value": { "value": 30, "unit": "px" }
+      }
+    },
+    "border": {
+      "width": {
+        "default": {
+          "$type": "dimension",
+          "$value": { "value": 1, "unit": "px" }
+        },
+        "emphasis": {
+          "$type": "dimension",
+          "$value": { "value": 2, "unit": "px" }
+        }
+      }
+    },
+    "motion": {
+      "duration": {
+        "fast": {
+          "$type": "duration",
+          "$value": { "value": 100, "unit": "ms" },
+          "$description": "Micro-interactions (Fox: 0.1s)"
+        },
+        "normal": {
+          "$type": "duration",
+          "$value": { "value": 200, "unit": "ms" },
+          "$description": "Standard transitions (Fox: 0.2s)"
+        },
+        "slow": {
+          "$type": "duration",
+          "$value": { "value": 300, "unit": "ms" },
+          "$description": "Page-level transitions (Fox: 0.3s)"
+        }
+      }
+    }
+  }
+}

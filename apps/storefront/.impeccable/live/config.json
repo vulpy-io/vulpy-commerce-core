@@ -1,0 +1,5 @@
+{
+  "files": ["src/app/(site)/layout.tsx", "src/app/(payload)/layout.tsx"],
+  "insertBefore": "</body>",
+  "commentSyntax": "jsx"
+}

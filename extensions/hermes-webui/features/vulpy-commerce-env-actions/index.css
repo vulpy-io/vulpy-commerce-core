@@ -1,0 +1,472 @@
+/* Vulpy Commerce — env actions styles.
+ *
+ * Namespace: vc-env-actions-* / vc-env-row-* classes. No global resets.
+ * Theme (design contract §4): chrome is host-themed via CSS variables
+ * (--bg, --surface, --border, --border2, --text, --muted, --hover-bg,
+ * --focus-ring, --font-ui, --font-mono, --code-bg, --pre-text).
+ * Brand-fixed only: the env palette (green/amber/red) and the
+ * cream/charcoal text tokens.
+ */
+
+/* ─── Inline action group (inside .vc-env-titlebar chip) ─────────────── */
+.vc-env-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.vc-env-actions[hidden] {
+  display: none;
+}
+
+/* Ghost buttons inside the bordered titlebar chip (like a segmented
+   control) — no per-button borders, hover bg for affordance. */
+.vc-env-actions-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 11px;
+  font-weight: 700;                      /* bold for small UI */
+  line-height: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.vc-env-actions-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.vc-env-actions-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.vc-env-actions-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Env-colored text only (no border — the chip carries the chrome). */
+.vc-env-actions-btn--staging {
+  color: #AB3C00;                        /* amber env color */
+}
+
+.vc-env-actions-btn--staging:hover:not(:disabled) {
+  color: #AB3C00;
+}
+
+.vc-env-actions-btn--live {
+  color: #760521;                        /* red env color */
+}
+
+.vc-env-actions-btn--live:hover:not(:disabled) {
+  color: #760521;
+}
+
+/* ─── Thin chevrons (stroke-width 2, host iconography) ───────────────── */
+.vc-env-chevron {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: transform 0.15s ease;
+}
+
+.vc-env-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+/* ─── Pull data dropdown ──────────────────────────────────────────────── */
+.vc-env-actions-pull-wrapper {
+  position: relative;
+}
+
+.vc-env-actions-pull-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 4px;
+  z-index: 2147483004;
+  display: flex;
+  flex-direction: column;
+  min-width: 130px;
+  padding: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  box-shadow: 5px 5px 10px 0 rgb(184 160 137 / 60%);
+}
+
+html.dark .vc-env-actions-pull-menu {
+  box-shadow: 5px 5px 10px 0 rgb(0 0 0 / 40%);
+}
+
+.vc-env-actions-pull-menu[hidden] {
+  display: none;
+}
+
+.vc-env-actions-pull-option {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  transition: background-color 0.15s;
+}
+
+.vc-env-actions-pull-option:hover {
+  background: var(--hover-bg);
+}
+
+.vc-env-actions-pull-empty {
+  padding: 7px 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* ─── Sync button (mobile trigger, ≤640px) ──────────────────────────── */
+.vc-env-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  cursor: pointer;
+  color: var(--muted);
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.vc-env-sync-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.vc-env-sync-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.vc-env-sync-btn[hidden] {
+  display: none;
+}
+
+.vc-env-row-mobile-menu {
+  position: fixed;
+  top: 56px;                /* below the 52px mobile titlebar */
+  right: 12px;              /* same right padding as the titlebar */
+  z-index: 2147483003;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  min-width: 180px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  box-shadow: 5px 5px 10px 0 rgb(184 160 137 / 60%);
+}
+
+html.dark .vc-env-row-mobile-menu {
+  box-shadow: 5px 5px 10px 0 rgb(0 0 0 / 40%);
+}
+
+.vc-env-row-mobile-menu[hidden] {
+  display: none;
+}
+
+.vc-env-row-mobile-menu button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;        /* ≥40px tap target */
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.vc-env-row-mobile-menu button:hover:not(:disabled) {
+  background: var(--hover-bg);
+}
+
+.vc-env-row-mobile-menu button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vc-env-row-mobile-pull {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 12px;
+  margin: -2px 0 2px;
+}
+
+.vc-env-row-mobile-pull[hidden] {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .vc-env-actions { display: none; }
+  .vc-env-sync-btn { display: inline-flex; }
+}
+
+/* ─── Log panel (mini terminal) ──────────────────────────────────────── */
+.vc-env-actions-log-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483005;
+  display: flex;
+  flex-direction: column;
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  max-height: 340px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;        /* brand container radius */
+  box-shadow: 5px 5px 10px 0 rgb(184 160 137 / 60%);
+  overflow: hidden;
+}
+
+html.dark .vc-env-actions-log-panel {
+  box-shadow: 5px 5px 10px 0 rgb(0 0 0 / 40%);
+}
+
+.vc-env-actions-log-panel[hidden] {
+  display: none;
+}
+
+.vc-env-actions-log-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.vc-env-actions-log-title {
+  flex: 1;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.015em;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+.vc-env-actions-log-status {
+  padding: 1px 8px;
+  border-radius: 5px;             /* brand 5px */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+.vc-env-actions-log-status--running {
+  background: #19381F;             /* green — calm running indicator */
+  color: #ffffff;
+  border-color: #19381F;
+}
+
+.vc-env-actions-log-status--ok {
+  background: #19381F;             /* green — brand success */
+  color: #ffffff;
+  border-color: #19381F;
+}
+
+.vc-env-actions-log-status--err {
+  background: #760521;             /* red — not chart red */
+  color: #ffffff;
+  border-color: #760521;
+}
+
+.vc-env-actions-log-close {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 16px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.vc-env-actions-log-close:hover {
+  color: var(--text);
+}
+
+.vc-env-actions-log-output {
+  flex: 1;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--code-bg);       /* host code background */
+  color: var(--pre-text);           /* host pre text */
+  font-size: 11px;
+  line-height: 1.45;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+.vc-env-actions-log-cmd {
+  color: #19381F;                   /* green — command prefix */
+}
+
+.vc-env-actions-log-err {
+  color: #760521;                   /* red — error text */
+}
+
+.vc-env-actions-log-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.vc-env-actions-log-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.015em;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+.vc-env-actions-log-service {
+  background: var(--code-bg);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 11px;
+  padding: 2px 6px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+/* ─── Confirm modal ──────────────────────────────────────────────────── */
+.vc-env-actions-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  /* NO backdrop-filter — brand anti-pattern */
+}
+
+.vc-env-actions-modal[hidden] {
+  display: none;
+}
+
+.vc-env-actions-modal-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;             /* brand container radius */
+  padding: 24px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 5px 5px 10px 0 rgb(184 160 137 / 60%);
+}
+
+html.dark .vc-env-actions-modal-card {
+  box-shadow: 5px 5px 10px 0 rgb(0 0 0 / 40%);
+}
+
+.vc-env-actions-modal-title {
+  margin: 0 0 8px;
+  font-family: "Manrope", var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.vc-env-actions-modal-message {
+  margin: 0 0 20px;
+  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.vc-env-actions-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Cancel button — host-themed, secondary */
+.vc-env-actions-modal-cancel {
+  padding: 8px 16px;
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.vc-env-actions-modal-cancel:hover {
+  background: var(--hover-bg);
+}
+
+/* Confirm/Continue button — brand-danger styling (red + cream) */
+.vc-env-actions-modal-confirm {
+  padding: 8px 16px;
+  border: 1px solid #760521;        /* red */
+  border-radius: 5px;
+  background: #760521;              /* solid red */
+  color: #fbf9f4;                   /* cream text */
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.vc-env-actions-modal-confirm:hover {
+  background: #a83a2a;              /* darker terracotta */
+  border-color: #a83a2a;
+}
+
+.vc-env-actions-modal-confirm:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}

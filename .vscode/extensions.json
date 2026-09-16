@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "biomejs.biome",
+    "bradlc.vscode-tailwindcss",
+    "csstools.postcss"
+  ],
+  "unwantedRecommendations": [
+    "sanity-io.vscode-sanity"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "apiVersion": "platform.vulpy.io/app-contract/v1",
+  "kind": "ApplicationPackage",
+  "metadata": {
+    "name": "vulpy-commerce",
+    "release": "0.0.0"
+  },
+  "placement": {
+    "unit": "application"
+  },
+  "ingress": {
+    "scope": "application",
+    "targetCommand": ["pnpm", "vulpy", "app", "ingress-target"]
+  },
+  "environments": {
+    "supported": ["dev", "staging", "live"],
+    "independentVersions": false,
+    "independentPlacement": false
+  },
+  "lifecycle": {
+    "install": ["pnpm", "vulpy", "install"],
+    "upgrade": ["pnpm", "vulpy", "install"],
+    "status": ["pnpm", "vulpy", "dev", "status"],
+    "health": ["pnpm", "vulpy", "verify"],
+    "environmentCreate": ["pnpm", "vulpy", "env", "add", "<name>"],
+    "environmentStart": ["pnpm", "vulpy", "env", "up", "<name>"],
+    "environmentStop": ["pnpm", "vulpy", "env", "down", "<name>"],
+    "backup": ["pnpm", "vulpy", "env", "backup", "<name>"],
+    "restore": ["pnpm", "vulpy", "env", "restore", "<name>", "<archive>"],
+    "export": ["bash", "scripts/migrate/export-local.sh"],
+    "import": ["bash", "scripts/migrate/import-on-vps.sh"]
+  },
+  "backup": {
+    "includesConfiguration": true
+  }
+}

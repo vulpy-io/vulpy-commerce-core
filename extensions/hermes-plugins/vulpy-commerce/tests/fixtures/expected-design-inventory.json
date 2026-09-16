@@ -1,0 +1,6 @@
+{
+  "section_order": ["hero", "category-grid", "new-arrivals", "story", "care", "newsletter"],
+  "block_order": ["hero", "categoryGrid", "productGrid", "richText", "mediaWithText", "newsletter"],
+  "redacted_media": ["/media/hero.jpg", "/media/care.jpg"],
+  "redacted_links": ["/shop", "/shop?sort=latest", "/care-guide"]
+}

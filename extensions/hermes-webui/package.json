@@ -1,0 +1,36 @@
+{
+  "name": "@vulpy/hermes-assistant-ui-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "validate": "node scripts/validate-manifest.mjs"
+  },
+  "dependencies": {
+    "@assistant-ui/react": "0.15.13",
+    "@assistant-ui/react-markdown": "0.14.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "recharts": "^3.10.1",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0",
+    "@types/node": "^26.2.0",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@vitejs/plugin-react": "5.0.4",
+    "esbuild": "0.25.12",
+    "jsdom": "26.1.0",
+    "typescript": "5.9.2",
+    "vite": "7.1.7",
+    "vitest": "3.2.4"
+  },
+  "packageManager": "pnpm@10.15.0"
+}

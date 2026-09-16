@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "name": "create_chart",
+      "description": "Render a data chart in the operator pane. Call this when the operator asks for a chart, graph, plot, or data visualization. The pane renders the chart client-side from your arguments; do not also describe the chart in prose.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chart_type": { "type": "string", "enum": ["line", "bar", "pie", "area"] },
+          "title": { "type": "string" },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "value": { "type": "number" }
+              },
+              "required": ["label", "value"]
+            }
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "color": { "type": "string" },
+              "x_label": { "type": "string" },
+              "y_label": { "type": "string" }
+            }
+          }
+        },
+        "required": ["chart_type", "title", "data"]
+      },
+      "renderer": "chart"
+    },
+    {
+      "name": "render_preview",
+      "description": "Preview a file already written on local disk in the operator pane. Call after creating an HTML, SVG, image, audio, or video file. Pass only its absolute local path and type; never put file content in tool arguments. The pane fetches the file through its session-scoped /api/media endpoint and renders it safely.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["html", "svg", "image", "audio", "video"],
+            "description": "Content type for rendering. html: sandboxed iframe. svg: inline SVG. image: rendered as <img>. audio/video: media player."
+          },
+          "path": {
+            "type": "string",
+            "description": "Absolute path to the file on disk, e.g. /tmp/concept-login.html. The file is served to the frontend via /api/media with session-scoped access."
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Optional title shown in the preview header. Default: the filename."
+          }
+        },
+        "required": ["type", "path"]
+      },
+      "renderer": "preview"
+    }
+  ],
+  "renderers": {
+    "chart": "FrontendChartCard",
+    "preview": "FrontendPreviewCard"
+  }
+}

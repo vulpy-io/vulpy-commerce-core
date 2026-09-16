@@ -1,0 +1,187 @@
+{
+  "semantic": {
+    "$description": "Universal roles consumed by storefront behavior and component aliases.",
+    "color": {
+      "surface": {
+        "canvas": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.0}"
+        },
+        "raised": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.0}"
+        },
+        "muted": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.50}"
+        },
+        "inverse": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.800}"
+        },
+        "subtle": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.100}"
+        }
+      },
+      "content": {
+        "primary": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.800}"
+        },
+        "secondary": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.700}"
+        },
+        "muted": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.500}"
+        },
+        "inverse": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.0}"
+        },
+        "brand": {
+          "$type": "color",
+          "$value": "{reference.color.brand.500}"
+        }
+      },
+      "border": {
+        "subtle": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.200}"
+        },
+        "strong": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.300}"
+        }
+      },
+      "action": {
+        "primary": {
+          "background": {
+            "$type": "color",
+            "$value": "{reference.color.brand.500}"
+          },
+          "hover": {
+            "$type": "color",
+            "$value": "{reference.color.brand.700}"
+          },
+          "foreground": {
+            "$type": "color",
+            "$value": "{reference.color.neutral.0}"
+          }
+        },
+        "secondary": {
+          "background": {
+            "$type": "color",
+            "$value": "{reference.color.neutral.0}"
+          },
+          "hover": {
+            "$type": "color",
+            "$value": "{reference.color.brand.50}"
+          },
+          "foreground": {
+            "$type": "color",
+            "$value": "{reference.color.neutral.800}"
+          },
+          "border": {
+            "$type": "color",
+            "$value": "{reference.color.neutral.200}"
+          }
+        },
+        "selected": {
+          "$type": "color",
+          "$value": "{reference.color.highlight.500}"
+        }
+      },
+      "status": {
+        "danger": {
+          "$type": "color",
+          "$value": "{reference.color.danger.500}"
+        },
+        "dangerSurface": {
+          "$type": "color",
+          "$value": "{reference.color.danger.50}"
+        },
+        "success": {
+          "$type": "color",
+          "$value": "{reference.color.success.700}"
+        },
+        "successSurface": {
+          "$type": "color",
+          "$value": "{reference.color.success.50}"
+        },
+        "warning": {
+          "$type": "color",
+          "$value": "{reference.color.warning.700}"
+        },
+        "warningSurface": {
+          "$type": "color",
+          "$value": "{reference.color.warning.50}"
+        }
+      },
+      "commerce": {
+        "price": {
+          "$type": "color",
+          "$value": "{reference.color.neutral.800}"
+        },
+        "sale": {
+          "$type": "color",
+          "$value": "{reference.color.danger.500}"
+        },
+        "inStock": {
+          "$type": "color",
+          "$value": "{reference.color.success.700}"
+        },
+        "outOfStock": {
+          "$type": "color",
+          "$value": "{reference.color.danger.500}"
+        }
+      },
+      "focus": {
+        "ring": {
+          "$type": "color",
+          "$value": "{reference.color.brand.500}"
+        }
+      }
+    },
+    "font": {
+      "body": {
+        "$type": "fontFamily",
+        "$value": "{reference.font.family.body}"
+      },
+      "heading": {
+        "$type": "fontFamily",
+        "$value": "{reference.font.family.heading}"
+      }
+    },
+    "radius": {
+      "control": {
+        "$type": "dimension",
+        "$value": "{reference.radius.control}"
+      },
+      "card": {
+        "$type": "dimension",
+        "$value": "{reference.radius.md}"
+      },
+      "overlay": {
+        "$type": "dimension",
+        "$value": "{reference.radius.lg}"
+      },
+      "panel": {
+        "$type": "dimension",
+        "$value": "{reference.radius.panel}"
+      },
+      "badge": {
+        "$type": "dimension",
+        "$value": "{reference.radius.badge}"
+      }
+    },
+    "motion": {
+      "interactive": {
+        "$type": "duration",
+        "$value": "{reference.motion.duration.normal}"
+      }
+    }
+  }
+}

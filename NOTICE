@@ -1,0 +1,10 @@
+Vulpy Commerce Core
+Copyright 2026 Vulpy, Inc.
+
+This Core release is provided under the Apache License, Version 2.0.
+
+Third-party components
+----------------------
+This distribution includes third-party components. Their names, notices, and licenses remain governed by their respective licenses as shipped in their package metadata or source tree. In particular, the Medusa starter material and other dependencies retain their own copyright and license terms. See the relevant package LICENSE/NOTICE files and the SBOM for the dependency inventory.
+
+The Vulpy, Inc. Apache-2.0 license for this Core release does not relicense third-party components.

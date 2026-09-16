@@ -1,0 +1,210 @@
+/* Vulpy Commerce — env context styles.
+ *
+ * Namespace: vc-env-* classes/ids. No global resets. Scoped under
+ * .vc-env-* selectors to avoid bleeding into the host WebUI.
+ *
+ * Theme (design contract §4): chrome is host-themed via CSS variables
+ * (--bg, --surface, --border, --border2, --text, --muted, --hover-bg,
+ * --focus-ring, --font-ui, --font-mono). Brand-fixed only: the env palette
+ * (green/amber/red) and the cream/charcoal text tokens.
+ */
+
+/* ─── Top Bar ────────────────────────────────────────────────────────── */
+.vc-env-bar {
+  transition: background-color 0.25s ease;
+}
+
+/* ─── Native titlebar visibility (operator direction 2026-08-18) ───────
+   The Fox overlay hides header.app-titlebar on desktop ("title redundant
+   when sidebar visible"). The env chrome lives INSIDE that titlebar, so
+   the bar must be visible on desktop too. This stylesheet loads after the
+   overlay's fox-in-the-box.css (manifest stylesheet order), and the extra
+   `html body` specificity beats the overlay's plain `.app-titlebar` rule. */
+html body .app-titlebar {
+  display: flex;
+}
+
+/* ─── Titlebar chip (inside header.app-titlebar) ─────────────────────── */
+/* Matches the host's .app-titlebar-profile chrome: 28px height, 1px solid
+   var(--border2), 6px radius, 11px font, var(--muted) text, no background.
+   margin-left:auto right-aligns it on desktop where .app-titlebar-new-chat
+   is hidden. The titlebar is -webkit-app-region:drag, so the chip (and its
+   buttons) must be no-drag to stay clickable. */
+.vc-env-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0 4px;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+.vc-env-titlebar[hidden] {
+  display: none;
+}
+
+/* ─── Pill Badge ─────────────────────────────────────────────────────── */
+/* Env identity inside the chip: env-color left border accent + label color,
+   so the green/amber/red palette stays visible on any host skin. */
+.vc-env-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 8px 0 6px;
+  border: none;
+  border-left: 3px solid var(--vc-env-color, var(--border2));
+  border-radius: 0;
+  background: none;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  line-height: 20px;
+  text-transform: uppercase;
+  color: var(--vc-env-color, var(--muted));
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.vc-env-pill:hover {
+  background: var(--hover-bg);
+}
+
+.vc-env-pill:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.vc-env-pill--dev {
+  --vc-env-color: #19381F;      /* green */
+}
+
+.vc-env-pill--staging {
+  --vc-env-color: #AB3C00;      /* amber */
+}
+
+.vc-env-pill--live {
+  --vc-env-color: #760521;      /* red */
+}
+
+/* ─── Popover (env switcher) — anchored under the titlebar ───────────── */
+.vc-env-popover {
+  position: fixed;
+  top: 38px;                    /* 38px desktop titlebar */
+  right: 12px;                  /* same right padding as the titlebar */
+  z-index: 2147483003;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  min-width: 140px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;       /* brand 5px */
+  box-shadow: 5px 5px 10px 0 rgb(184 160 137 / 60%);
+}
+
+@media (max-width: 640px) {
+  .vc-env-popover {
+    top: 52px;                /* 52px mobile titlebar */
+  }
+}
+
+html.dark .vc-env-popover {
+  box-shadow: 5px 5px 10px 0 rgb(0 0 0 / 40%);
+}
+
+.vc-env-popover[hidden] {
+  display: none;
+}
+
+.vc-env-popover-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.vc-env-popover-option:hover {
+  background: var(--hover-bg);
+}
+
+.vc-env-popover-option:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* Colored dot indicator on the left */
+.vc-env-popover-option::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 5px;       /* small square-corner dot */
+  flex-shrink: 0;
+}
+
+.vc-env-popover-option[data-vc-env="dev"]::before {
+  background: #19381F;
+}
+
+.vc-env-popover-option[data-vc-env="staging"]::before {
+  background: #AB3C00;
+}
+
+.vc-env-popover-option[data-vc-env="live"]::before {
+  background: #760521;
+}
+
+/* ─── Session-list env tags ──────────────────────────────────────────── */
+/* Small env tag next to the project dot in each .session-title-row.
+   Lives in the row's flex flow (like .session-project-dot) so it stays
+   visible regardless of title truncation. */
+.vc-env-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  border: 1px solid var(--vc-env-color, var(--border2));
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--vc-env-color, var(--border2)) 12%, transparent);
+  color: var(--vc-env-color, var(--muted));
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.vc-env-tag--dev {
+  --vc-env-color: #19381F;      /* green */
+}
+
+.vc-env-tag--staging {
+  --vc-env-color: #AB3C00;      /* amber */
+}
+
+.vc-env-tag--live {
+  --vc-env-color: #760521;      /* red */
+}

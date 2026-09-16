@@ -1,0 +1,228 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_call:
+    # Optional for callers (deploy-dev/staging/live pass it explicitly; Core's
+    # own push/PR runs ignore this block). When the secret is absent the
+    # checkout-e2e-stripe gate step skips the job body instead of failing.
+    secrets:
+      NEXT_PUBLIC_STRIPE_KEY:
+        required: false
+      STRIPE_API_KEY:
+        required: false
+
+concurrency:
+  # Separate concurrency slots for direct pushes vs workflow_call invocations
+  # so deploy-dev calling CI doesn't cancel the push-triggered CI run.
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm test:webui
+
+  checkout-e2e-structural:
+    name: Checkout E2E (structural)
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.15.0"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - name: Run structural E2E via harness
+        if: hashFiles('scripts/tests/checkout-e2e.sh') != ''
+        run: bash scripts/tests/checkout-e2e.sh --grep @structural
+        env:
+          CI: true
+          NEXT_PUBLIC_STRIPE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_KEY }}
+          STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
+
+  checkout-e2e-stripe:
+    name: Checkout E2E (Stripe)
+    runs-on: ubuntu-latest
+    needs: [checkout-e2e-structural]
+    # NOTE: the `secrets` context is NOT allowed in a job-level `if`
+    # (available contexts there: github, inputs, needs, vars). Referencing it
+    # here made GitHub reject the whole workflow before any job was created
+    # (alpha.11: "zero jobs, no logs"). The secret gate therefore lives in a
+    # step below that exposes an output; this job-level if only filters the
+    # branch (github.ref).
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+    steps:
+      - name: Check Stripe key presence
+        id: stripe-gate
+        run: |
+          if [ -n "$NEXT_PUBLIC_STRIPE_KEY" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          NEXT_PUBLIC_STRIPE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_KEY }}
+
+      - name: Skip when Stripe key is not configured
+        if: steps.stripe-gate.outputs.configured != 'true'
+        run: echo "NEXT_PUBLIC_STRIPE_KEY not configured — skipping Stripe E2E."
+
+      - uses: actions/checkout@v4
+        if: steps.stripe-gate.outputs.configured == 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.stripe-gate.outputs.configured == 'true'
+        with:
+          version: "10.15.0"
+      - uses: actions/setup-node@v4
+        if: steps.stripe-gate.outputs.configured == 'true'
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+        if: steps.stripe-gate.outputs.configured == 'true'
+      - name: Run Stripe E2E via harness
+        if: steps.stripe-gate.outputs.configured == 'true' && hashFiles('scripts/tests/checkout-e2e.sh') != ''
+        run: bash scripts/tests/checkout-e2e.sh --grep @stripe
+        env:
+          CI: true
+          NEXT_PUBLIC_STRIPE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_KEY }}
+          STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
+
+  stripe-config-check:
+    name: Stripe config check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Verify Stripe key configured
+        run: |
+          if [ -z "$STRIPE_KEY" ]; then
+            echo "::error::NEXT_PUBLIC_STRIPE_KEY secret is not configured. Stripe checkout will not work on main."
+            exit 1
+          fi
+        env:
+          STRIPE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_KEY }}
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    env:
+      # Stub env vars so Next.js / Medusa build succeeds without a real DB.
+      # These are build-time only — no real secrets needed.
+      DATABASE_URL: postgresql://medusa:medusa@localhost:5432/medusa
+      REDIS_URL: redis://localhost:6379
+      MEDUSA_BACKEND_URL: http://localhost:9000
+      MEDUSA_PUBLISHABLE_KEY: pk_placeholder
+      PAYLOAD_SECRET: build-placeholder-secret-32-chars-ok
+      PAYLOAD_DATABASE_URL: postgresql://medusa:medusa@localhost:5432/payload
+      NEXT_PUBLIC_SERVER_URL: http://localhost:3000
+      NEXT_PUBLIC_ENABLE_CUSTOMER_ACCOUNTS: "true"
+      JWT_SECRET: build-placeholder-jwt-secret
+      COOKIE_SECRET: build-placeholder-cookie-secret
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Build email plugin first (medusa-backend depends on it)
+      # Build medusa-backend (validates server-side TS, no runtime needed)
+      - run: pnpm --filter @apps/medusa-backend build
+      # Build storefront — this is the high-value gate: catches missing
+      # "use client", wrong server/client boundary, dead imports, etc.
+      - run: pnpm --filter @apps/storefront build
+
+  design-tokens:
+    name: Design tokens
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Verify generated artifacts (DESIGN.md + .impeccable/design.json + tokens.generated.css)
+      # are in sync with source tokens. Fails if any artifact is stale.
+      - run: pnpm --filter @apps/storefront design:check
+      # Run the design token unit tests (DTCG alias resolution, override layering, etc.)
+      - run: pnpm --filter @apps/storefront design:test
+
+  impeccable:
+    name: Impeccable design detector
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # impeccable is an npm devDependency (no submodule since 2026-08-14).
+      - name: Run Impeccable anti-pattern detector (exit 2 on primary findings)
+        run: pnpm exec impeccable detect apps/storefront/src
+
+  # Single required-status-check name. Add/remove jobs above without
+  # touching branch protection rules — only this name is gated.
+  ci-gate:
+    name: CI Gate
+    needs: [lint, typecheck, test, checkout-e2e-structural, build, design-tokens, impeccable]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check all required jobs passed
+        run: |
+          results='${{ toJSON(needs.*.result) }}'
+          echo "Job results: $results"
+          if echo "$results" | grep -qE '"(failure|cancelled)"'; then
+            echo "One or more CI jobs failed."
+            exit 1
+          fi
+          echo "All required CI jobs passed."

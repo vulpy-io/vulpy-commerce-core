@@ -1,0 +1,6 @@
+name: my-tool-plugin
+kind: standalone
+version: 1.0.0
+description: One-line description of what this plugin provides
+author: Fox (agent-created)
+---

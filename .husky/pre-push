@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+# Ensure pnpm is on PATH even in minimal hook environments (containers, IDEs,
+# GUI clients) where corepack shims or the pnpm home aren't exported.
+if ! command -v pnpm >/dev/null 2>&1; then
+    for _d in /usr/lib/node_modules/corepack/shims "$HOME/.local/share/pnpm" "$HOME/Library/pnpm"; do
+        if [ -d "$_d" ]; then
+            PATH="$_d:$PATH"
+            export PATH
+            break
+        fi
+    done
+fi
+
+# Turbo cache fallback: the repo .turbo/ may be root-owned in containers
+# (bind-mount), so turbo can't create .turbo/cache and every push fails with
+# "IO error: failed to create directory .turbo/cache (Permission denied)".
+# Redirect the cache to a writable temp dir when the repo cache isn't writable.
+if [ ! -w "${TURBO_CACHE_DIR:-.turbo}" ] 2>/dev/null; then
+    TURBO_CACHE_DIR="${TMPDIR:-/tmp}/turbo-cache"
+    export TURBO_CACHE_DIR
+fi
+
+pnpm verify:docker:medusa-packaging
+pnpm typecheck

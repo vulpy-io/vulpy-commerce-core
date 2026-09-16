@@ -1,0 +1,113 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medusa}
+      POSTGRES_DB: medusa
+    volumes:
+      # Postgres requires a POSIX filesystem (ext4). On NTFS hosts, set POSTGRES_DATA_DIR in the selected environment file.
+      - ${POSTGRES_DATA_DIR:-.data/dev/postgres}:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa -d medusa"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      # Redis RDB/AOF needs a POSIX filesystem. On NTFS hosts, REDIS_DATA_DIR falls back
+      # to ~/.local/share/<project>/redis (see scripts/lib/project-env.sh).
+      - ${REDIS_DATA_DIR:-.data/dev/redis}:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Optional local Matomo (not started by pnpm dev / db:up). See: pnpm db:matomo:up
+  matomo-db:
+    profiles:
+      - matomo
+    image: mariadb:11.4.5
+    restart: unless-stopped
+    command: --max-allowed-packet=64MB --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MATOMO_DB_ROOT_PASSWORD:-matomo-root}
+      MYSQL_DATABASE: matomo
+      MYSQL_USER: matomo
+      MYSQL_PASSWORD: ${MATOMO_DB_PASSWORD:-matomo}
+    volumes:
+      - ${MATOMO_DB_DATA_DIR:-.data/dev/matomo-db}:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  matomo:
+    profiles:
+      - matomo
+    image: matomo:5.12.0
+    restart: unless-stopped
+    ports:
+      - "${MATOMO_HOST_PORT:-8081}:80"
+    environment:
+      MATOMO_DATABASE_HOST: matomo-db
+      MATOMO_DATABASE_ADAPTER: mysql
+      MATOMO_DATABASE_TABLES_PREFIX: matomo_
+      MATOMO_DATABASE_USERNAME: matomo
+      MATOMO_DATABASE_PASSWORD: ${MATOMO_DB_PASSWORD:-matomo}
+      MATOMO_DATABASE_DBNAME: matomo
+    volumes:
+      - ${MATOMO_DATA_DIR:-.data/dev/matomo}:/var/www/html
+    depends_on:
+      matomo-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "php -r \"exit(@fsockopen('127.0.0.1', 80) ? 0 : 1);\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  matomo-archive:
+    profiles:
+      - matomo
+    image: matomo:5.12.0
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        while true; do
+          php /var/www/html/console core:archive --url="http://matomo" || true
+          sleep 300
+        done
+    environment:
+      MATOMO_DATABASE_HOST: matomo-db
+      MATOMO_DATABASE_ADAPTER: mysql
+      MATOMO_DATABASE_TABLES_PREFIX: matomo_
+      MATOMO_DATABASE_USERNAME: matomo
+      MATOMO_DATABASE_PASSWORD: ${MATOMO_DB_PASSWORD:-matomo}
+      MATOMO_DATABASE_DBNAME: matomo
+    volumes:
+      - ${MATOMO_DATA_DIR:-.data/dev/matomo}:/var/www/html
+    depends_on:
+      matomo:
+        condition: service_healthy
+      matomo-db:
+        condition: service_healthy

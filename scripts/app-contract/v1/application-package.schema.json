@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.vulpy.io/app-contract/v1/application-package.schema.json",
+  "title": "Vulpy application package",
+  "description": "Product-neutral contract consumed by Vulpy Control.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "placement",
+    "ingress",
+    "environments",
+    "lifecycle",
+    "backup"
+  ],
+  "properties": {
+    "apiVersion": {
+      "const": "platform.vulpy.io/app-contract/v1"
+    },
+    "kind": {
+      "const": "ApplicationPackage"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "release"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,62}$"
+        },
+        "release": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit"
+      ],
+      "properties": {
+        "unit": {
+          "const": "application"
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "targetCommand"
+      ],
+      "properties": {
+        "scope": {
+          "const": "application"
+        },
+        "targetCommand": {
+          "$ref": "#/$defs/command"
+        }
+      }
+    },
+    "environments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supported",
+        "independentVersions",
+        "independentPlacement"
+      ],
+      "properties": {
+        "supported": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "dev",
+              "staging",
+              "live"
+            ]
+          }
+        },
+        "independentVersions": {
+          "type": "boolean"
+        },
+        "independentPlacement": {
+          "const": false
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "install",
+        "upgrade",
+        "status",
+        "health",
+        "environmentCreate",
+        "environmentStart",
+        "environmentStop",
+        "backup",
+        "restore",
+        "export",
+        "import"
+      ],
+      "properties": {
+        "install": {
+          "$ref": "#/$defs/command"
+        },
+        "upgrade": {
+          "$ref": "#/$defs/command"
+        },
+        "status": {
+          "$ref": "#/$defs/command"
+        },
+        "health": {
+          "$ref": "#/$defs/command"
+        },
+        "environmentCreate": {
+          "$ref": "#/$defs/command"
+        },
+        "environmentStart": {
+          "$ref": "#/$defs/command"
+        },
+        "environmentStop": {
+          "$ref": "#/$defs/command"
+        },
+        "backup": {
+          "$ref": "#/$defs/command"
+        },
+        "restore": {
+          "$ref": "#/$defs/command"
+        },
+        "export": {
+          "$ref": "#/$defs/command"
+        },
+        "import": {
+          "$ref": "#/$defs/command"
+        }
+      }
+    },
+    "backup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "includesConfiguration"
+      ],
+      "properties": {
+        "includesConfiguration": {
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "command": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

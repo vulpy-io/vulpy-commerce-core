@@ -1,0 +1,128 @@
+name: Graphify — knowledge graph
+
+# ─── When to run ────────────────────────────────────────────────────────────
+on:
+  # Automatic: rebuild after every push to main (incremental, fast)
+  push:
+    branches: [main]
+
+  # Manual: useful to force a full rebuild or trigger from CI chain
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Build mode"
+        required: false
+        default: "update"
+        type: choice
+        options: [update, full]
+
+  # Weekly full rebuild on Sunday midnight UTC — keeps the graph fresh
+  # even during quiet periods and catches any drift.
+  schedule:
+    - cron: "0 0 * * 0"
+
+# Only one graph build at a time; let a newer one cancel an older one
+concurrency:
+  group: graphify
+  cancel-in-progress: true
+
+jobs:
+  graphify:
+    name: Build knowledge graph
+    runs-on: self-hosted   # same runner as CI — has Python + repo cache
+
+    permissions:
+      contents: write      # needed to commit the updated graph files
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history gives graphify accurate file ages for the cache
+          fetch-depth: 0
+
+      # ── Python / graphify ──────────────────────────────────────────────
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          # No pip cache: graphify has no requirements.txt/pyproject.toml
+
+      - name: Install graphify
+        run: pip install --upgrade graphifyy
+
+      # ── Restore persistent graph cache ────────────────────────────────
+      # The cache dir holds SHA256 hashes so incremental runs skip
+      # unchanged files entirely (no LLM calls).
+      - name: Restore graphify cache
+        uses: actions/cache@v4
+        with:
+          path: graphify-out/cache
+          # Key changes whenever graph.json changes (force re-warm on full builds)
+          key: graphify-cache-${{ hashFiles('graphify-out/graph.json') }}
+          restore-keys: |
+            graphify-cache-
+
+      # ── Run graphify ───────────────────────────────────────────────────
+      # When ANTHROPIC_API_KEY is set: full semantic extraction (code + docs + images).
+      # When not set: code-only AST extraction (zero cost, zero API calls).
+      # Both paths produce graph.json / graph.html / GRAPH_REPORT.md.
+      - name: Build / update knowledge graph
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          MODE="${{ github.event.inputs.mode || 'update' }}"
+          # Weekly cron always does a full rebuild
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            MODE="full"
+          fi
+          echo "▶ graphify mode: $MODE  |  API key: $( [ -n "$ANTHROPIC_API_KEY" ] && echo 'set (full semantic)' || echo 'not set (code-only AST)' )"
+
+          # Build flags — fall back to --code-only when no LLM key is present
+          EXTRA_FLAGS=""
+          if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
+            EXTRA_FLAGS="--code-only"
+          fi
+
+          if [[ "$MODE" == "full" ]]; then
+            graphify . $EXTRA_FLAGS
+          else
+            graphify . --update $EXTRA_FLAGS
+          fi
+
+      # ── Also build the wiki for agent navigation ───────────────────────
+      - name: Build wiki
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          EXTRA_FLAGS=""
+          if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
+            EXTRA_FLAGS="--code-only"
+          fi
+          graphify . --wiki $EXTRA_FLAGS
+        continue-on-error: true  # wiki is nice-to-have; don't fail the job
+
+      # ── Commit updated output back to the repo ─────────────────────────
+      # We commit graph.html + graph.json + GRAPH_REPORT.md + wiki/
+      # so the team always has an up-to-date interactive graph in the repo.
+      # The cache/ and obsidian/ dirs stay gitignored.
+      - name: Commit updated graph
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Only stage the committed outputs (cache is gitignored)
+          git add graphify-out/graph.html \
+                  graphify-out/graph.json \
+                  graphify-out/GRAPH_REPORT.md \
+                  graphify-out/wiki/ \
+                  2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "✓ Graph unchanged — nothing to commit."
+          else
+            git commit -m "chore(graphify): update knowledge graph [skip ci]"
+            git push origin HEAD:main
+            echo "✓ Graph committed and pushed."
+          fi

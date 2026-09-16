@@ -1,0 +1,7 @@
+name: remote-ssh
+kind: standalone
+version: 1.0.0
+description: JSON-parameter SSH tool for Vulpy boxes — run/bg/poll/put/get with zero shell quoting (base64 transport).
+author: Fox / Vulpy Commerce
+provides_tools:
+  - remote

@@ -1,0 +1,60 @@
+# graphifyignore — merged with .gitignore by graphify
+# Syntax: same as .gitignore  (negation with ! is supported)
+
+# ── Node / pnpm ────────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── Build outputs ──────────────────────────────────────────────────────────
+.next/
+.turbo/
+.medusa/
+dist/
+build/
+out/
+.tmp/
+
+# ── Generated / auto-synced ────────────────────────────────────────────────
+# Payload-generated types are derived from source; no value indexing them
+apps/storefront/src/payload-types.ts
+# Admin import map — generated artifact
+apps/storefront/.next/
+
+# ── Docker / data ──────────────────────────────────────────────────────────
+.data/
+
+# ── Graphify own output (never index yourself) ─────────────────────────────
+graphify-out/
+
+# ── Env files ─────────────────────────────────────────────────────────────
+.env
+.env.*
+environments/*/.env
+deploy/.env
+
+# ── Media / binary ────────────────────────────────────────────────────────
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.mp4
+*.webm
+*.pdf
+apps/storefront/media/
+apps/medusa-backend/static/
+
+# ── Lock files (large, low-value for graph) ───────────────────────────────
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# ── Test fixtures / snapshots ─────────────────────────────────────────────
+**/__snapshots__/
+**/fixtures/

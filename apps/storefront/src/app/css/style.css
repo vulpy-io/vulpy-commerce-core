@@ -1,0 +1,840 @@
+@import "tailwindcss";
+@import "./tokens.generated.css";
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* CSS-first theme (replaces tailwind.config.ts)                              */
+/* ─────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* --- Font family --- */
+  --font-family-sans: var(--font-manrope), Manrope, ui-sans-serif, system-ui, sans-serif;
+  --font-family-heading: var(--font-sora), Sora, ui-sans-serif, system-ui, sans-serif;
+
+  /* --- Breakpoints (extend defaults + Vulpy custom) --- */
+  --breakpoint-xsm: 375px;
+  --breakpoint-lsm: 425px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1300px;
+  --breakpoint-3xl: 2000px;
+
+  /* --- Container --- */
+  --container-padding: 15px;
+  --container-2xl: 1300px;
+
+  /* --- Static colors (legacy palette, now reference-only) --- */
+  --color-white: #ffffff;
+  --color-body: #4f4f4f;
+  --color-surface: #f4f4f4;
+
+  --color-meta: #f7f9fc;
+  --color-meta-2: #495270;
+  --color-meta-3: #606882;
+  --color-meta-4: #8d93a5;
+  --color-meta-5: #bbbec9;
+
+  --color-dark: #333333;
+  --color-dark-2: #495270;
+  --color-dark-3: #606882;
+  --color-dark-4: #8d93a5;
+  --color-dark-5: #bbbec9;
+
+  --color-gray: #f3f5f6;
+  --color-gray-1: #f9fafb;
+  --color-gray-2: #f3f4f6;
+  --color-gray-3: #e5e7eb;
+  --color-gray-4: #d1d5db;
+  --color-gray-5: #9ca3af;
+  --color-gray-6: #6b7280;
+  --color-gray-7: #374151;
+
+  /* blue = brand accent; kept for legacy @apply compatibility (style.css) */
+  --color-blue: #860044;
+  --color-blue-dark: #6b003e;
+  --color-blue-light: #9b3366;
+  --color-blue-light-2: #b36688;
+  --color-blue-light-3: #cc99aa;
+  --color-blue-light-4: #e5ccdd;
+  --color-blue-light-5: #f5e6ee;
+
+  --color-red: #b60802;
+  --color-red-dark: #850502;
+  --color-red-light: #f56060;
+  --color-red-light-2: #f89090;
+  --color-red-light-3: #fbc0c0;
+  --color-red-light-4: #fdd8d8;
+  --color-red-light-5: #feebeb;
+  --color-red-light-6: #fef3f3;
+
+  --color-green: #22ad5c;
+  --color-green-dark: #1a8245;
+  --color-green-light: #2cd673;
+  --color-green-light-2: #57de8f;
+  --color-green-light-3: #82e6ac;
+  --color-green-light-4: #acefc8;
+  --color-green-light-5: #c2f3d6;
+  --color-green-light-6: #daf8e6;
+
+  --color-yellow: #fbbf24;
+  --color-yellow-dark: #f59e0b;
+  --color-yellow-dark-2: #d97706;
+  --color-yellow-light: #fcd34d;
+  --color-yellow-light-1: #fde68a;
+  --color-yellow-light-2: #fef3c7;
+  --color-yellow-light-4: #fffbeb;
+
+  --color-teal: #02aaa4;
+  --color-teal-dark: #06a09b;
+  --color-orange: #f27430;
+  --color-orange-dark: #e1580e;
+
+  /* --- Product card tokens (CSS-var backed, theme-overridable) --- */
+  --color-product-card-background: var(--product-card-background);
+  --color-product-card-media-background: var(--product-card-media-background);
+  --color-product-card-title: var(--product-card-title);
+  --color-product-card-title-hover: var(--product-card-title-hover);
+  --color-product-card-action-background: var(--product-card-action-background);
+  --color-product-card-action-hover: var(--product-card-action-hover);
+  --color-product-card-action-foreground: var(--product-card-action-foreground);
+  --color-product-card-icon-background: var(--product-card-icon-background);
+  --color-product-card-icon-foreground: var(--product-card-icon-foreground);
+  --color-product-card-icon-hover: var(--product-card-icon-hover);
+  --color-product-card-out-of-stock: var(--product-card-out-of-stock);
+
+  /* --- Semantic design tokens (three-layer: reference → semantic → component) --- */
+  --color-action-primary-background: var(--design-color-action-primary-background);
+  --color-action-primary-hover: var(--design-color-action-primary-hover);
+  --color-action-primary-foreground: var(--design-color-action-primary-foreground);
+  --color-action-secondary-background: var(--design-color-action-secondary-background);
+  --color-action-secondary-border: var(--design-color-action-secondary-border);
+  --color-action-secondary-foreground: var(--design-color-action-secondary-foreground);
+  --color-action-secondary-hover: var(--design-color-action-secondary-hover);
+  --color-action-selected: var(--design-color-action-selected);
+  --color-content-primary: var(--design-color-content-primary);
+  --color-content-secondary: var(--design-color-content-secondary);
+  --color-content-muted: var(--design-color-content-muted);
+  --color-content-brand: var(--design-color-content-brand);
+  --color-content-inverse: var(--design-color-content-inverse);
+  --color-surface-canvas: var(--design-color-surface-canvas);
+  --color-surface-inverse: var(--design-color-surface-inverse);
+  --color-surface-muted: var(--design-color-surface-muted);
+  --color-surface-raised: var(--design-color-surface-raised);
+  --color-surface-subtle: var(--design-color-surface-subtle);
+  --color-status-danger: var(--design-color-status-danger);
+  --color-status-danger-surface: var(--design-color-status-danger-surface);
+  --color-status-success: var(--design-color-status-success);
+  --color-status-success-surface: var(--design-color-status-success-surface);
+  --color-status-warning: var(--design-color-status-warning);
+  --color-status-warning-surface: var(--design-color-status-warning-surface);
+  --color-focus-ring: var(--design-color-focus-ring);
+  --color-border-subtle: var(--design-color-border-subtle);
+  --color-border-strong: var(--design-color-border-strong);
+  --color-commerce-sale: var(--design-color-commerce-sale);
+  --color-commerce-price: var(--design-color-commerce-price);
+  --color-commerce-in-stock: var(--design-color-commerce-in-stock);
+  --color-commerce-out-of-stock: var(--design-color-commerce-out-of-stock);
+
+  /* --- Font weights (Fox brand inverse-weight hierarchy) --- */
+  --font-weight-light: var(--reference-font-weight-light);     /* 320 — display/h1 */
+  --font-weight-regular: var(--reference-font-weight-regular); /* 450 — body */
+  --font-weight-button: var(--reference-font-weight-button);   /* 800 — CTA buttons */
+
+  /* --- Border radius --- */
+  --radius-product-card: var(--product-card-radius);
+  --radius-control: var(--design-radius-control);
+  --radius-panel: var(--design-radius-panel);
+  --radius-badge: var(--design-radius-badge);
+
+  /* --- Font sizes (Fox in the Box scale — matches design/tokens) --- */
+  --text-2xs: 10px;
+  --text-2xs--line-height: 16px;
+  --text-heading-1: 48px;
+  --text-heading-1--line-height: calc(48px * 1.4);
+  --text-heading-2: 32px;
+  --text-heading-2--line-height: 40px;
+  --text-heading-3: 28px;
+  --text-heading-3--line-height: calc(28px * 1.357);
+  --text-heading-4: 24px;
+  --text-heading-4--line-height: 32px;
+  --text-heading-5: 22px;
+  --text-heading-5--line-height: 28px;
+  --text-heading-6: 20px;
+  --text-heading-6--line-height: 32px;
+  --text-custom-xl: 20px;
+  --text-custom-xl--line-height: 24px;
+  --text-custom-lg: 18px;
+  --text-custom-lg--line-height: 24px;
+  --text-custom-sm: 14px;
+  --text-custom-sm--line-height: 22px;
+  --text-custom-xs: 12px;
+  --text-custom-xs--line-height: 20px;
+  --text-custom-2xl: 24px;
+  --text-custom-2xl--line-height: 34px;
+  --text-custom-4xl: 36px;
+  --text-custom-4xl--line-height: 48px;
+  --text-custom-1: 22px;
+  --text-custom-1--line-height: 30px;
+  --text-custom-2: 32px;
+  --text-custom-2--line-height: 38px;
+  --text-custom-3: 35px;
+  --text-custom-3--line-height: 45px;
+
+  /* --- Spacing (extended scale) --- */
+  --spacing-4\.5: 1.125rem;
+  --spacing-5\.5: 1.375rem;
+  --spacing-6\.5: 1.625rem;
+  --spacing-7\.5: 1.875rem;
+  --spacing-8\.5: 2.125rem;
+  --spacing-9\.5: 2.375rem;
+  --spacing-10\.5: 2.625rem;
+  --spacing-11: 2.75rem;
+  --spacing-11\.5: 2.875rem;
+  --spacing-12\.5: 3.125rem;
+  --spacing-13: 3.25rem;
+  --spacing-13\.5: 3.375rem;
+  --spacing-14: 3.5rem;
+  --spacing-14\.5: 3.625rem;
+  --spacing-15: 3.75rem;
+  --spacing-15\.5: 3.875rem;
+  --spacing-16: 4rem;
+  --spacing-16\.5: 4.125rem;
+  --spacing-17: 4.25rem;
+  --spacing-17\.5: 4.375rem;
+  --spacing-18: 4.5rem;
+  --spacing-18\.5: 4.625rem;
+  --spacing-19: 4.75rem;
+  --spacing-19\.5: 4.875rem;
+  --spacing-21: 5.25rem;
+  --spacing-21\.5: 5.375rem;
+  --spacing-22: 5.5rem;
+  --spacing-22\.5: 5.625rem;
+  --spacing-24\.5: 6.125rem;
+  --spacing-25: 6.25rem;
+  --spacing-25\.5: 6.375rem;
+  --spacing-26: 6.5rem;
+  --spacing-27: 6.75rem;
+  --spacing-27\.5: 6.875rem;
+  --spacing-29: 7.25rem;
+  --spacing-29\.5: 7.375rem;
+  --spacing-30: 7.5rem;
+  --spacing-31: 7.75rem;
+  --spacing-31\.5: 7.875rem;
+  --spacing-32\.5: 8.125rem;
+  --spacing-33: 8.25rem;
+  --spacing-34: 8.5rem;
+  --spacing-34\.5: 8.625rem;
+  --spacing-35: 8.75rem;
+  --spacing-36\.5: 9.125rem;
+  --spacing-37: 9.25rem;
+  --spacing-37\.5: 9.375rem;
+  --spacing-39: 9.75rem;
+  --spacing-39\.5: 9.875rem;
+  --spacing-40: 10rem;
+  --spacing-42\.5: 10.625rem;
+  --spacing-45: 11.25rem;
+  --spacing-46: 11.5rem;
+  --spacing-47\.5: 11.875rem;
+  --spacing-49: 12.25rem;
+  --spacing-50: 12.5rem;
+  --spacing-51: 12.75rem;
+  --spacing-51\.5: 12.875rem;
+  --spacing-52: 13rem;
+  --spacing-52\.5: 13.125rem;
+  --spacing-54: 13.5rem;
+  --spacing-54\.5: 13.625rem;
+  --spacing-55: 13.75rem;
+  --spacing-55\.5: 13.875rem;
+  --spacing-57\.5: 14.375rem;
+  --spacing-59: 14.75rem;
+  --spacing-60: 15rem;
+  --spacing-62\.5: 15.625rem;
+  --spacing-65: 16.25rem;
+  --spacing-67: 16.75rem;
+  --spacing-67\.5: 16.875rem;
+  --spacing-70: 17.5rem;
+  --spacing-72\.5: 18.125rem;
+  --spacing-75: 18.75rem;
+  --spacing-90: 22.5rem;
+  --spacing-92\.5: 23.125rem;
+  --spacing-94: 23.5rem;
+  --spacing-100: 25rem;
+  --spacing-110: 27.5rem;
+  --spacing-115: 28.75rem;
+  --spacing-122\.5: 30.625rem;
+  --spacing-125: 31.25rem;
+  --spacing-127\.5: 31.875rem;
+  --spacing-132\.5: 33.125rem;
+  --spacing-142\.5: 35.625rem;
+  --spacing-150: 37.5rem;
+  --spacing-166\.5: 41.625rem;
+  --spacing-171\.5: 42.875rem;
+  --spacing-180: 45rem;
+  --spacing-187\.5: 46.875rem;
+  --spacing-192\.5: 48.125rem;
+  --spacing-203: 50.75rem;
+  --spacing-230: 57.5rem;
+
+  /* --- Max-width overrides --- */
+  --width-30: 7.5rem;
+  --width-40: 10rem;
+  --width-50: 12.5rem;
+
+  /* --- Z-index scale --- */
+  --z-index-1: 1;
+  --z-index-99: 99;
+  --z-index-999: 999;
+  --z-index-9999: 9999;
+  --z-index-99999: 99999;
+  --z-index-999999: 999999;
+
+  /* --- Box shadows --- */
+  --shadow-1: 0px 1px 2px 0px rgba(166, 175, 195, 0.25);
+  --shadow-2: 0px 6px 24px 0px rgba(235, 238, 251, 0.40), 0px 2px 4px 0px rgba(148, 163, 184, 0.05);
+  --shadow-3: 0px 2px 16px 0px rgba(13, 10, 44, 0.12);
+  --shadow-7: 0px 2px 20px 0px rgba(13, 10, 44, 0.16);
+  --shadow-testimonial: 0px 0px 4px 0px rgba(148, 163, 184, 0.10), 0px 6px 12px 0px rgba(224, 227, 238, 0.45);
+  --shadow-breadcrumb: 0px 1px 0px 0px var(--reference-color-neutral-200), 0px -1px 0px 0px var(--reference-color-neutral-200);
+  --shadow-range: 0px 0px 1px 0px rgba(33, 37, 41, 0.08), 0px 2px 2px 0px rgba(33, 37, 41, 0.06);
+  --shadow-filter: 0px 1px 0px 0px var(--reference-color-neutral-200);
+  --shadow-list: 1px 0px 0px 0px var(--reference-color-neutral-200);
+  --shadow-input: inset 0 0 0 2px var(--design-color-action-selected);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Container utility (replaces v3 theme.container config)                     */
+/* ─────────────────────────────────────────────────────────────────────────── */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 15px;
+  max-width: 1300px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Inline scrollbar utilities (replaces tailwind-scrollbar npm package)       */
+/* Only the 4 classes used in ProductSearchTypeahead.tsx are provided.        */
+/* ─────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  /* track = gray-1 (#f9fafb), thumb = gray-4 (#d1d5db) default */
+  .scrollbar-track-gray-1 {
+    scrollbar-color: var(--scrollbar-thumb-color, #d1d5db) #f9fafb;
+  }
+  .scrollbar-thumb-gray-4 {
+    --scrollbar-thumb-color: #d1d5db;
+  }
+  .hover\:scrollbar-thumb-gray-5:hover {
+    --scrollbar-thumb-color: #9ca3af;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Base layer                                                                  */
+/* ─────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    /* Fixed-header offset — the single source of truth for content below the
+       fixed top navbar. HeaderHeightSync overwrites this with the measured
+       <header> height (via ResizeObserver) once hydrated, so this default
+       only guards the pre-hydration / no-JS / SSR frame.
+       Two-bar layout: main bar (~62px) below lg; + utility strip (~33px) at
+       lg+ where the top bar becomes visible. */
+    --header-height: 62px;
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --header-height: 95px;
+    }
+  }
+
+  html {
+    @apply scroll-smooth;
+    /* Anchor jumps land below the fixed header instead of under it. */
+    scroll-padding-top: var(--header-height);
+  }
+
+  body {
+    @apply font-sans font-normal text-base text-body relative z-1;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+
+  /* Transient pre-load overlay: fades out ~250ms after mount even if JS is
+     dead (hydration stall). The real layout is always in the DOM underneath —
+     the veil only masks the brief paint, it never gates content. */
+  .preloader-overlay {
+    animation: preloader-fade-out 0.25s ease-out 0.15s forwards;
+  }
+
+  @keyframes preloader-fade-out {
+    to {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Component layer                                                             */
+/* ─────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .dropdown {
+    @apply flex-col gap-0 min-w-max xl:w-[193px] mt-2 lg:mt-0 bg-white shadow-2 ease-in duration-200 py-2.5 rounded-md border border-gray-3 left-0 top-full hidden
+    xl:translate-y-10 xl:opacity-0 xl:invisible xl:absolute xl:flex xl:overflow-visible
+    xl:group-hover:opacity-100 xl:group-hover:visible;
+  }
+
+  /* 3rd-level flyout — absolute panel to the right of the submenu parent,
+     revealed on hover of the submenu item (group/sub). Mobile keeps the
+     nested lists static/inline, so this stays xl-only.
+     Overrides the base .dropdown group-hover reveal (which would otherwise
+     show the nested panel whenever ANY top-level group is hovered). */
+  .dropdown-nested {
+    @apply xl:absolute xl:left-full xl:top-0 xl:ml-0.5 xl:mt-0 xl:translate-y-0 xl:opacity-0 xl:invisible
+    xl:group-hover:opacity-0 xl:group-hover:invisible
+    xl:group-hover/sub:opacity-100 xl:group-hover/sub:visible;
+  }
+
+  /* All-caps UI label — nav, section titles, micro-labels (Lato light/regular + wide tracking) */
+  .text-caps {
+    @apply uppercase tracking-[0.14em];
+  }
+
+  /* Payload Lexical rich text — storefront typography */
+  .cms-prose .payload-richtext {
+    @apply text-body;
+  }
+
+  .cms-prose .payload-richtext > *:first-child {
+    @apply mt-0;
+  }
+
+  .cms-prose .payload-richtext > *:last-child {
+    @apply mb-0;
+  }
+
+  .cms-prose h1 {
+    @apply mt-10 mb-4 font-bold text-dark text-2xl leading-tight xl:text-heading-4;
+  }
+
+  .cms-prose h2 {
+    @apply mt-8 mb-3 font-bold text-dark text-xl leading-snug xl:text-heading-5;
+  }
+
+  .cms-prose h3 {
+    @apply mt-6 mb-2 font-semibold text-dark text-lg leading-snug xl:text-custom-2xl;
+  }
+
+  .cms-prose h4 {
+    @apply mt-5 mb-2 font-semibold text-dark text-custom-xl leading-snug;
+  }
+
+  .cms-prose h5 {
+    @apply mt-4 mb-2 font-semibold text-dark text-base leading-snug;
+  }
+
+  .cms-prose h6 {
+    @apply mt-4 mb-2 font-semibold text-dark-3 text-custom-sm uppercase tracking-wide;
+  }
+
+  .cms-prose p {
+    @apply mb-4 text-body text-base leading-relaxed;
+  }
+
+  .cms-prose a {
+    @apply font-medium text-blue-dark underline underline-offset-2 transition-colors hover:text-blue;
+  }
+
+  .cms-prose strong,
+  .cms-prose b {
+    @apply font-bold text-dark;
+  }
+
+  .cms-prose em,
+  .cms-prose i {
+    @apply font-medium text-dark;
+  }
+
+  .cms-prose ul,
+  .cms-prose ol {
+    @apply mb-4 pl-6;
+  }
+
+  .cms-prose ul {
+    @apply list-disc;
+  }
+
+  .cms-prose ol {
+    @apply list-decimal;
+  }
+
+  .cms-prose li {
+    @apply mb-2 text-body leading-relaxed;
+  }
+
+  .cms-prose li:last-child {
+    @apply mb-0;
+  }
+
+  .cms-prose li > ul,
+  .cms-prose li > ol {
+    @apply mt-2 mb-0;
+  }
+
+  .cms-prose li.nestedListItem {
+    @apply list-none pl-0;
+  }
+
+  .cms-prose blockquote {
+    @apply my-6 border-blue border-l-2 pl-4 text-dark-3;
+  }
+
+  .cms-prose blockquote p {
+    @apply mb-2;
+  }
+
+  .cms-prose hr {
+    @apply my-8 border-0 border-gray-3 border-t;
+  }
+
+  .cms-prose code {
+    @apply rounded bg-gray-1 px-1.5 py-0.5 text-custom-sm text-dark;
+  }
+
+  .cms-prose pre {
+    @apply my-6 overflow-x-auto rounded-lg bg-gray-1 p-4;
+  }
+
+  .cms-prose pre code {
+    @apply bg-transparent p-0;
+  }
+
+  .cms-prose table {
+    @apply my-6 w-full border-collapse text-left text-custom-sm;
+  }
+
+  .cms-prose th {
+    @apply border border-gray-3 bg-gray-1 px-4 py-2 font-semibold text-dark;
+  }
+
+  .cms-prose td {
+    @apply border border-gray-3 px-4 py-2 text-body;
+  }
+
+  .cms-prose .list-item-checkbox {
+    @apply flex items-start gap-2 list-none pl-0;
+  }
+
+  .cms-prose .list-item-checkbox input {
+    @apply mt-1 shrink-0;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Utilities layer                                                             */
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Semantic heading + eyebrow utilities (Fox brand scale)                      */
+/* ─────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Page-level h1 — Sora, inverse-weight light, display scale, tight tracking */
+  .h1 {
+    font-family: var(--font-sora), Sora, ui-sans-serif, system-ui, sans-serif;
+    @apply font-light text-[clamp(32px,3vw,40px)] text-content-primary leading-[1.15] tracking-[-0.015em];
+  }
+
+  /* Section heading — matches "Shop by Category", "New Arrivals" */
+  .h2 {
+    @apply font-normal text-3xl text-content-primary xl:text-heading-2;
+  }
+
+  /* Sub-section heading */
+  .h3 {
+    @apply font-medium text-heading-3 text-content-primary;
+  }
+
+  /* Card / carousel heading */
+  .h4 {
+    @apply font-semibold text-heading-4 text-content-primary;
+  }
+
+  /* Section overline label — e.g. "THIS WEEK'S", "THE COLLECTION" */
+  .eyebrow {
+    @apply font-bold uppercase text-content-secondary text-custom-xs tracking-[0.06em];
+  }
+}
+
+@layer utilities {
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .scrollbar-no-arrows::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Third-party / vendor CSS                                                    */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* clears the 'X' from Internet Explorer */
+input[type='search']::-ms-clear {
+  display: none;
+  width: 0;
+  height: 0;
+}
+input[type='search']::-ms-reveal {
+  display: none;
+  width: 0;
+  height: 0;
+}
+/* clears the 'X' from Chrome */
+input[type='search']::-webkit-search-decoration,
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-results-button,
+input[type='search']::-webkit-search-results-decoration {
+  display: none;
+}
+.custom-search {
+  -webkit-border-radius: 0;
+  -webkit-border-top-right-radius: 5px;
+  -webkit-border-bottom-right-radius: 5px;
+}
+
+/* The container must be positioned relative: */
+.custom-select select {
+  display: none; /*hide original SELECT element: */
+}
+
+.select-selected {
+  /* v4: !class → class! (important suffix) */
+  @apply bg-white rounded-l-[5px] border border-gray-3 border-r-0! cursor-pointer text-dark text-custom-sm py-[11px] pl-3.5 pr-8 relative;
+}
+
+/* Style the arrow inside the select element: */
+.select-selected:after {
+  content: "";
+  @apply absolute top-1/2 -translate-y-1/2 right-4.5;
+  @apply h-2 w-2 rotate-45 border-gray-4 border-r border-b;
+}
+
+/* Point the arrow upwards when the select box is open (active): */
+.select-selected.select-arrow-active:after {
+  @apply rotate-180 mt-0.5;
+}
+
+/* style the items (options), including the selected item: */
+.select-items div {
+  @apply cursor-pointer text-dark-3 text-custom-sm py-[7px] px-4.5;
+}
+
+/* Style items (options): */
+.select-items {
+  @apply absolute top-full left-0 right-0 z-99 shadow-2 border border-gray-3 bg-white rounded-md py-2.5 mt-1.5;
+}
+
+/* Hide the items when the select box is closed: */
+.select-hide {
+  display: none;
+}
+
+.select-items div:hover,
+.same-as-selected {
+  @apply bg-gray-1 text-dark;
+}
+
+.custom-select-2 .select-selected {
+  @apply bg-white rounded-md border-r! text-dark-4 py-1.5 pl-3 pr-9;
+}
+.custom-select-2 .select-selected:after {
+  content: "";
+  @apply h-2 w-2 rotate-45 border-gray-4 border-r border-b;
+  @apply absolute top-1/2 -translate-y-1/2 right-3.5;
+}
+
+.custom-select-common .select-selected {
+  @apply bg-gray-1 rounded-md border-r! text-dark-4 py-3 pl-5 pr-9 duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20;
+}
+.custom-select-common .select-selected:after {
+  @apply right-4 block mt-1;
+}
+.custom-select-common .select-selected.select-arrow-active:after {
+  @apply -mt-0.5;
+}
+
+.custom-select-dark .select-selected {
+  @apply rounded-none rounded-l-[5px] border-0 border-r! border-gray-3 bg-white text-dark hover:bg-gray-1;
+}
+
+.custom-select-dark .select-selected:after {
+  @apply right-4;
+}
+
+
+.hero-carousel .swiper-pagination-bullet {
+  @apply h-1 w-4 rounded-[11px] bg-white/30;
+}
+
+.hero-carousel .swiper-pagination-bullet-active {
+  @apply w-5.5 bg-blue;
+}
+
+.hero-carousel .swiper-pagination {
+  @apply xl:bottom-5!;
+}
+
+.hero-carousel-full .swiper-slide {
+  @apply bg-surface-inverse;
+}
+
+.hero-carousel-full .swiper-pagination {
+  @apply bottom-8 left-1/2 flex w-full max-w-[1300px] -translate-x-1/2 justify-start px-[15px];
+}
+
+.hero-carousel-full .swiper-pagination-bullet {
+  @apply h-0.5 w-7 rounded-none bg-white/40 opacity-100 transition-colors duration-200 first:ml-0;
+}
+
+.hero-carousel-full .swiper-pagination-bullet-active {
+  @apply bg-white;
+}
+
+.hero-carousel-full .hero-full-prev,
+.hero-carousel-full .hero-full-next {
+  @apply absolute bottom-7 z-10 hidden h-11 w-11 items-center justify-center border border-white/60 bg-transparent text-white transition-colors duration-200 hover:bg-white hover:text-surface-inverse sm:flex;
+}
+
+.hero-carousel-full .hero-full-next {
+  @apply right-6 sm:right-12 xl:right-16;
+}
+
+.hero-carousel-full .hero-full-prev {
+  @apply right-[5.5rem] sm:right-24 xl:right-32;
+}
+
+.hero-carousel-full .hero-full-prev::after,
+.hero-carousel-full .hero-full-next::after {
+  content: none;
+}
+
+.product-carousel .swiper-pagination {
+  @apply bottom-0! sm:hidden!;
+}
+
+.product-carousel .swiper-pagination-bullet {
+  @apply h-1 w-4 rounded-[11px] bg-gray-4;
+}
+
+.product-carousel .swiper-pagination-bullet-active {
+  @apply w-5.5 bg-blue;
+}
+
+.common-carousel .swiper-button-next:after,
+.common-carousel .swiper-button-prev:after {
+  @apply hidden;
+}
+
+.common-carousel .swiper-button-next,
+.common-carousel .swiper-button-prev {
+  @apply static! h-9 w-9 rounded-lg bg-white text-dark border border-gray-3 m-0 ease-out duration-200 hover:bg-blue hover:text-white hover:border-blue;
+}
+
+.common-carousel .swiper-button-next svg,
+.common-carousel .swiper-button-prev svg {
+  @apply w-auto h-auto;
+}
+
+.preview-slider .preview-slider__swiper {
+  @apply w-full overflow-hidden;
+}
+
+.preview-slider .swiper-wrapper {
+  @apply flex items-center;
+}
+
+.preview-slider .swiper-slide {
+  width: 100% !important;
+  flex-shrink: 0;
+  @apply flex items-center justify-center;
+}
+
+.preview-slider .swiper-fade .swiper-slide {
+  pointer-events: none;
+}
+
+.preview-slider .swiper-fade .swiper-slide-active {
+  pointer-events: auto;
+}
+
+.img-zoom-container img {
+  transition: 0.8s;
+}
+.img-zoom-container img:hover {
+  transform: scale(2) rotate(0deg);
+  transition: 0.8s;
+}
+
+.priceSlide .noUi-target {
+  @apply mb-5 mt-9 border-none bg-transparent shadow-none;
+}
+.priceSlide .noUi-connects {
+  @apply h-1 rounded-full bg-gray-3;
+}
+.priceSlide .noUi-connect {
+  @apply h-1 rounded-full bg-body;
+}
+.priceSlide .noUi-horizontal .noUi-handle {
+  @apply -top-3 h-7 w-7 rounded-full border border-gray-4 bg-white shadow-range before:block before:absolute before:left-1/2 before:top-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:w-4 before:h-4 before:rounded-full before:bg-body;
+}
+.priceSlide .noUi-tooltip {
+  @apply border-none p-0 bg-transparent text-custom-sm text-dark-4;
+}
+.noUi-horizontal .noUi-handle:after,
+.noUi-horizontal .noUi-handle:before {
+  @apply hidden;
+}
+
+
+.range-slider {
+ @apply w-full h-[4px]! rounded-md bg-gray-3 relative mb-3;
+}
+
+.slider .thumb {
+  @apply w-6 h-6 bg-dark rounded-full absolute -top-2 border-[5px] border-gray-3;
+}
+
+.range-slider__thumb {
+  @apply bg-white! border border-gray-3 flex justify-center items-center w-7! h-7!;
+}
+
+.range-slider__thumb::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  display: block;
+  border-radius: 100%;
+  position: absolute;
+  @apply bg-body;
+}
+
+.range-slider__range {
+  @apply bg-body!;
+}

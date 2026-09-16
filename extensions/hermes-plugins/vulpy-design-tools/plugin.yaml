@@ -1,0 +1,8 @@
+name: vulpy-design-tools
+kind: standalone
+version: 1.0.0
+description: Vulpy Commerce design operator tools — adopt external design tokens into the storefront DTCG pipeline (extract → map → validate → write overrides → gate) and drive designer mockup tasks with the full Tailwind CDN + storefront token config for 1-to-1 coder matching.
+author: Fox / Vulpy Commerce
+provides_tools:
+  - design_tokens_adopt
+  - design_task

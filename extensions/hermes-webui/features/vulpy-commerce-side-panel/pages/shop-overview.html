@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html data-vc lang="en" >
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1" name="viewport" >
+  <title>Shop overview — Vulpy Commerce</title>
+  <!-- Same-origin custom page: served by the WebUI at /extensions/..., styled
+       with the shared core tokens. No external fetches → no CONNECT_EXTRA. -->
+  <link href="/extensions/features/vulpy-commerce-core/index.css" rel="stylesheet" >
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--vc-font, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Helvetica, Arial, sans-serif);
+      background: var(--vc-bg, #1a1d24);
+      color: var(--vc-text, #e8eaf0);
+      padding: var(--vc-space-4, 16px);
+    }
+    .vc-page {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--vc-space-4, 16px);
+    }
+    .vc-page-header h1 { font-size: 18px; margin: 0 0 4px; }
+    .vc-page-sub {
+      font-size: 12px;
+      color: var(--vc-text-muted, #9aa3b2);
+      margin: 0 0 var(--vc-space-3, 12px);
+    }
+    .vc-card {
+      background: var(--vc-bg-elevated, #232833);
+      border: 1px solid var(--vc-border, #333a47);
+      border-radius: var(--vc-radius, 10px);
+      padding: var(--vc-space-4, 16px);
+    }
+    .vc-card h2 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--vc-text-muted, #9aa3b2);
+      margin: 0 0 var(--vc-space-2, 8px);
+    }
+    code {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      padding: 1px 4px;
+      font-family: var(--vc-font-mono, ui-monospace, SFMono-Regular, Menlo,
+        Consolas, monospace);
+      font-size: 0.92em;
+    }
+    .vc-kv {
+      margin: 0;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 12px;
+      font-size: 13px;
+    }
+    .vc-kv dt { color: var(--vc-text-muted, #9aa3b2); }
+    .vc-kv dd { margin: 0; word-break: break-all; }
+    .vc-links { display: flex; flex-direction: column; gap: 8px; }
+    .vc-link {
+      display: block;
+      padding: 8px 10px;
+      border: 1px solid var(--vc-border, #333a47);
+      border-radius: var(--vc-radius-sm, 6px);
+      color: var(--vc-text, #e8eaf0);
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .vc-link:hover { border-color: var(--vc-accent, #e5484d); }
+    .vc-muted { font-size: 12px; color: var(--vc-text-muted, #9aa3b2); }
+  </style>
+</head>
+<body>
+  <main class="vc-page">
+    <header class="vc-page-header">
+      <h1>Shop overview</h1>
+      <p class="vc-page-sub">
+        Same-origin status page served by the Hermes WebUI extension bundle
+        (<code>/extensions/features/vulpy-commerce-side-panel/pages/</code>).
+      </p>
+    </header>
+
+    <section class="vc-card">
+      <h2>Extension status</h2>
+      <div class="vc-status vc-muted" id="vc-status-body" >Loading…</div>
+    </section>
+
+    <section class="vc-card">
+      <h2>Shop links</h2>
+      <p class="vc-page-sub">
+        Targets from <code>vulpy-commerce.config.json</code>
+        (<code>VULPY_WEBUI_IFRAMES</code>; also allowlisted in
+        <code>HERMES_WEBUI_CSP_FRAME_EXTRA</code>).
+      </p>
+      <div class="vc-links" id="vc-links" ></div>
+    </section>
+  </main>
+
+  <!-- Core bootstrap: registry + config loader (idempotent; also auto-loads
+       the config on DOMContentLoaded). -->
+  <script defer src="/extensions/features/vulpy-commerce-core/index.js" ></script>
+  <script>
+    "use strict";
+    (() => {
+      function addRow(dl, key, value) {
+        const dt = document.createElement("dt");
+        dt.textContent = key;
+        const dd = document.createElement("dd");
+        dd.textContent = value;
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      }
+
+      function renderStatus(data, host) {
+        host.textContent = "";
+        if (data.error) {
+          host.textContent = `Status unavailable: ${data.error}`;
+          return;
+        }
+        const dl = document.createElement("dl");
+        dl.className = "vc-kv";
+        const manifest = data.manifest || {};
+        addRow(dl, "Manifest", manifest.status || "unknown");
+        addRow(dl, "Extensions", String(data.entry_count == null ? "-" : data.entry_count));
+        addRow(dl, "Scripts", `${String((data.script_urls || []).length)} injected`);
+        addRow(dl, "Stylesheets", `${String((data.stylesheet_urls || []).length)} injected`);
+        const warnings = data.warnings || [];
+        if (warnings.length > 0) {
+          addRow(dl, "Warnings", warnings.join("; "));
+        }
+        host.appendChild(dl);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const linksEl = document.getElementById("vc-links");
+        VulpyCommerce.loadConfig().then((cfg) => {
+          const iframes = Array.isArray(cfg.iframes) ? cfg.iframes : [];
+          if (iframes.length === 0) {
+            const none = document.createElement("p");
+            none.className = "vc-muted";
+            none.textContent = "No targets configured (VULPY_WEBUI_IFRAMES empty).";
+            linksEl.appendChild(none);
+          }
+          for (const t of iframes) {
+            if (!t || typeof t.url !== "string" || !t.url.trim()) { continue; }
+            const a = document.createElement("a");
+            a.href = t.url;
+            a.target = "_blank";
+            a.rel = "noopener";
+            a.className = "vc-link";
+            a.textContent = t.label || t.id || t.url;
+            linksEl.appendChild(a);
+          }
+        });
+
+        // Same-origin → allowed by connect-src 'self', no CSP change needed.
+        const statusBody = document.getElementById("vc-status-body");
+        fetch("/api/extensions/status", { cache: "no-store" })
+          .then((r) => r.ok ? r.json() : { error: `HTTP ${r.status}` })
+          .then((data) => {
+            renderStatus(data, statusBody);
+          })
+          .catch((err) => {
+            renderStatus({ error: String(err) }, statusBody);
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

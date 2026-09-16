@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "cms-migration": {
+      "source": "payloadcms/skills",
+      "sourceType": "github",
+      "skillPath": "skills/cms-migration/SKILL.md",
+      "computedHash": "c88f1e554c081d5c068f0c20cfd5a21331bb5a4e0bf9c97e80dd8175e18af94a"
+    },
+    "payload": {
+      "source": "payloadcms/skills",
+      "sourceType": "github",
+      "skillPath": "skills/payload/SKILL.md",
+      "computedHash": "868c518cec5efe3862accee8ef3751b72fac06d7e12a27c263dc17320f27b20c"
+    }
+  }
+}

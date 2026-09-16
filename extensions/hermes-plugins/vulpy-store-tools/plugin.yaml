@@ -1,0 +1,8 @@
+name: vulpy-store-tools
+kind: standalone
+version: 1.0.0
+description: Vulpy Commerce operator tools — store profile + mission progress (get/set structured state, deterministic next-action for the store-building journey).
+author: Fox / Vulpy Commerce
+provides_tools:
+  - store_profile
+  - mission_progress

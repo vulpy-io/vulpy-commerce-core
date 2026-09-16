@@ -1,0 +1,16 @@
+name: vulpy-commerce
+kind: standalone
+version: 1.0.0
+description: Vulpy Commerce operator tools (single plugin) — store profile, mission progress, Payload/Medusa content + catalog management (API-key auth), design tokens/mockup scaffold with Tailwind CDN, and factory dispatch. All 9 tools for the store-building journey.
+author: Fox / Vulpy Commerce
+provides_tools:
+  - store_profile
+  - mission_progress
+  - payload_upsert
+  - media_upload
+  - catalog_seed
+  - category_set_image
+  - design_tokens_adopt
+  - design_task
+  - coder_dispatch
+  - design_block_pipeline

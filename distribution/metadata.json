@@ -1,0 +1,10 @@
+{
+  "attestation": "placeholder",
+  "build_timestamp": "v1.0.0",
+  "edition": "core",
+  "image_target": "core",
+  "manifest_digest": "7b08c95ab1975b30495103d75021d9af44e6fec00373a8e8fc4650235bd00f89",
+  "package_set": [],
+  "schema": 1,
+  "source_revision": "367b1687f1c0b6a92e17b759fd72644db9a94618"
+}

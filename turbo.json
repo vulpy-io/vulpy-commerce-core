@@ -1,0 +1,56 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "//#check": {},
+    "//#fix": {
+      "cache": false
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".medusa/**", ".next/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^test"],
+      "inputs": ["$TURBO_DEFAULT$"]
+    },
+    "test:coverage": {
+      "dependsOn": ["^test:coverage"],
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": ["coverage/**"]
+    },
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "typegen": {
+      "cache": true,
+      "outputs": ["payload-types.ts"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "inputs": ["$TURBO_DEFAULT$"]
+    },
+    "@apps/storefront#build": {
+      "outputs": [".next/**"],
+      "cache": true,
+      "env": [
+        "MEDUSA_BACKEND_URL",
+        "MEDUSA_PUBLISHABLE_KEY",
+        "NEXT_PUBLIC_STRIPE_KEY",
+        "NEXT_PUBLIC_MEDUSA_ASSET_URL",
+        "PAYLOAD_SECRET",
+        "DATABASE_URI",
+        "PAYLOAD_DATABASE_URL",
+        "NEXT_PUBLIC_SERVER_URL",
+        "REQUIRE_LOGIN_FOR_PRICES",
+        "PRICE_GATE_MODE"
+      ]
+    }
+  }
+}

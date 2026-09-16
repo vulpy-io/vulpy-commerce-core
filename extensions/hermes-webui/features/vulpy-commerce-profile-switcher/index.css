@@ -1,0 +1,18 @@
+/* Vulpy Commerce overlay — unlock the Hermes profile switcher.
+
+   The shipped Fox skin (fox-in-the-box.css) hides the composer profile chip
+   and the profiles rail button by default. The Vulpy software-factory
+   workflow switches operator roles (fox, coder, architect, ...) from the
+   WebUI, so Vulpy re-enables both.
+
+   Loaded after fox-in-the-box.css via the WebUI extension manifest
+   (extensions/hermes-webui/manifest.json → features/vulpy-commerce-profile-switcher/),
+   so these rules win.
+   Workspace chip stays hidden (fox default) — not part of this override. */
+button[data-panel="profiles"] {
+  display: flex !important;
+}
+
+#profileChipWrap {
+  display: flex !important;
+}

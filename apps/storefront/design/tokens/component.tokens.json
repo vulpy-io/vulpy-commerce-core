@@ -1,0 +1,40 @@
+{
+  "component": {
+    "$description": "Narrow component recipes. Values normally alias semantic roles.",
+    "productCard": {
+      "background": { "$type": "color", "$value": "{semantic.color.surface.raised}" },
+      "mediaBackground": { "$type": "color", "$value": "{semantic.color.surface.muted}" },
+      "title": { "$type": "color", "$value": "{semantic.color.content.primary}" },
+      "titleHover": { "$type": "color", "$value": "{semantic.color.content.brand}" },
+      "radius": { "$type": "dimension", "$value": "{semantic.radius.card}" },
+      "actionBackground": { "$type": "color", "$value": "{semantic.color.action.primary.background}" },
+      "actionHover": { "$type": "color", "$value": "{semantic.color.action.primary.hover}" },
+      "actionForeground": { "$type": "color", "$value": "{semantic.color.action.primary.foreground}" },
+      "iconBackground": { "$type": "color", "$value": "{semantic.color.action.secondary.background}" },
+      "iconForeground": { "$type": "color", "$value": "{semantic.color.action.secondary.foreground}" },
+      "iconHover": { "$type": "color", "$value": "{semantic.color.content.brand}" },
+      "outOfStock": { "$type": "color", "$value": "{semantic.color.commerce.outOfStock}" }
+    },
+    "button": {
+      "primaryBackground": { "$type": "color", "$value": "{semantic.color.action.primary.background}" },
+      "primaryHover": { "$type": "color", "$value": "{semantic.color.action.primary.hover}" },
+      "primaryForeground": { "$type": "color", "$value": "{semantic.color.action.primary.foreground}" },
+      "radius": { "$type": "dimension", "$value": "{semantic.radius.control}" }
+    },
+    "input": {
+      "background": { "$type": "color", "$value": "{semantic.color.surface.raised}" },
+      "foreground": { "$type": "color", "$value": "{semantic.color.content.primary}" },
+      "border": { "$type": "color", "$value": "{semantic.color.border.strong}" },
+      "focus": { "$type": "color", "$value": "{semantic.color.focus.ring}" },
+      "radius": { "$type": "dimension", "$value": "{semantic.radius.control}" }
+    },
+    "header": {
+      "background": { "$type": "color", "$value": "{semantic.color.surface.raised}" },
+      "foreground": { "$type": "color", "$value": "{semantic.color.content.primary}" },
+      "border": { "$type": "color", "$value": "{semantic.color.border.subtle}" }
+    },
+    "footer": {
+      "background": { "$type": "color", "$value": "#eae3d9", "$description": "Footer surface — foxinthebox.io footer-surface (taupe 25% over cream), solid blend" }
+    }
+  }
+}

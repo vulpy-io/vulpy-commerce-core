@@ -1,0 +1,23 @@
+version: 1
+
+project:
+  name: vulpy-commerce
+
+# Environment directories are the runtime boundary. Each environment gets its
+# own Docker Compose project, persistent data, configuration, and public ports.
+environments:
+  dev:
+    mode: development
+    env_file: environments/dev/.env
+    data_dir: .data/dev
+    sleeping: true
+
+  live:
+    mode: production
+    env_file: environments/live/.env
+    data_dir: .data/live
+    sleeping: false
+
+# Additional production-like environments can be added under environments/<name>.
+# They use the production Compose overlay and must define unique HTTP/HTTPS ports
+# when they run on the same host.

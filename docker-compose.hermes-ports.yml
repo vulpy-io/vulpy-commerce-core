@@ -1,0 +1,10 @@
+# Overlay: publish the in-container dev shop servers to the host loopback so
+# the edge (tailscale serve / Caddy) can terminate HTTPS for previews.
+# Enabled when HERMES_DEV_PORTS=1 in environments/hermes/.env (VPS installs).
+# Not used on laptops where `pnpm dev` runs on the host and owns these ports.
+
+services:
+  hermes:
+    ports:
+      - "${HERMES_DEV_BIND:-127.0.0.1}:${HERMES_DEV_STOREFRONT_PORT:-3000}:3000"
+      - "${HERMES_DEV_BIND:-127.0.0.1}:${HERMES_DEV_MEDUSA_PORT:-9000}:9000"

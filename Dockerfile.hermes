@@ -1,0 +1,810 @@
+# Custom Hermes / Fox-in-the-Box image extending the stock cloud image.
+# Adds:
+#   - gh CLI (GitHub CLI) for repo/PR/issue management from inside the agent
+#   - Developer toolbelt: postgresql-client, redis-tools, ripgrep, yq, unzip, tree, bc
+#   - crawl4ai + Playwright Chromium for deep-crawl research
+#   - agent-browser + local Chromium for Fox's visual browser automation
+#
+# Build: docker compose -f docker-compose.hermes.yml build
+# Or:    pnpm vulpy hermes up  (after changing docker-compose.hermes.yml to use build:)
+
+# Pinned 2026-08-14: ghcr.io/fox-in-the-box-ai/cloud:stable →
+# @sha256:4e073949e5e18e85c15c0db4934db8e61878244ecbc5665c45d5562296c8933f
+# (tag `stable` is a MOVING tag — upstream bumps break patcher anchors and the
+# build fails "changed shape — update the patcher", which is the safety design
+# but a surprise on rebuild). Bump deliberately and re-run the patcher
+# self-test (.github/workflows/patcher-self-test.yml); do not move :stable
+# unpinned. Provenance: resolved live from ghcr.io registry API 2026-08-14;
+# amd64 image config created 2026-07-10T16:55:47Z (no commit labels in config).
+
+# Build fingerprint for auto-rebuild-on-up (VULPY_HERMES_AUTO_REBUILD).
+# Stamped at build time by scripts/vulpy-hermes-rebuild.sh; read by
+# scripts/lib/hermes-build-fingerprint.sh to decide staleness. `unknown`
+# marks images built without the stamp (pre-2026-08-14) → treated as stale.
+ARG VULPY_BUILD_FINGERPRINT=unknown
+ARG VULPY_EDITION=core
+FROM ghcr.io/fox-in-the-box-ai/cloud@sha256:4e073949e5e18e85c15c0db4934db8e61878244ecbc5665c45d5562296c8933f
+
+# Stamp the build fingerprint (must be after FROM — LABEL is invalid pre-FROM).
+# Re-declare the ARG here: an ARG before FROM is global-only and out of scope
+# inside the stage, so without this the LABEL value is always empty and the
+# image never matches the tree fingerprint (every `hermes up` rebuilds).
+ARG VULPY_BUILD_FINGERPRINT
+ARG VULPY_EDITION
+RUN case "${VULPY_EDITION}" in core|pro) ;; *) \
+      echo "VULPY_EDITION must be exactly core or pro, got: ${VULPY_EDITION}" >&2; \
+      exit 1; \
+    esac
+LABEL vulpy.hermes.build_fingerprint="${VULPY_BUILD_FINGERPRINT}" \
+      vulpy.hermes.edition="${VULPY_EDITION}" \
+      vulpy.hermes.image_target="${VULPY_EDITION}"
+
+# The exporter supplies an empty directory for Core and the declared package
+# payloads for Pro. Packages are content bundles, not independently runnable
+# image targets.
+COPY distribution/packages /opt/vulpy/packages
+COPY distribution/metadata.json /app/hermes-agent/release-metadata.json
+
+# Stamp the WebUI VERSION from the same fingerprint so the service-worker shell
+# cache (hermes-shell-<WEBUI_VERSION>) busts on EVERY rebuild. Without this the
+# version falls back to 'unknown' → constant CACHE_NAME → the browser serves
+# pre-rebuild ui.js/messages.js forever (no bus emits, no short-path).
+RUN mkdir -p /app/hermes-agent && \
+    printf '%s' "${VULPY_BUILD_FINGERPRINT}" > /app/hermes-agent/VERSION
+
+USER root
+
+# Fail fast on pipeline failures (hadolint DL4006): RUN commands using pipes
+# (curl | dd, curl | grep | sed) must abort on upstream errors instead of
+# silently consuming partial output.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Fox runs as the non-root `foxinthebox` user (HOME=/app), while image builds
+# run as root. Use Hermes' supported shared Playwright cache instead of either
+# user's HOME so the baked browsers are available at runtime and survive a
+# container recreate without a provider credential or first-use download.
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/hermes/.playwright
+
+# ---------------------------------------------------------------------------
+# Developer toolbelt
+#   - gh          : GitHub CLI — repo, PR, issue, release, workflow management
+#   - openssh-client : ssh/scp/sftp for remote VPS ops + git-over-ssh; the
+#                      paramiko fallback (fox-remote-ssh-paramiko skill) stays
+#                      for hosts where ssh is unavailable
+#   - rsync       : efficient file transfer over ssh (template copies, backups)
+#   - postgresql-client : psql for direct DB inspection and migration checks
+#   - redis-tools : redis-cli for cache inspection / flush
+#   - ripgrep     : rg — fast content search (used by Hermes search_files)
+#   - yq          : YAML/JSON/TOML processor — Compose and config editing
+#   - unzip tree bc wget : utility belt
+# ---------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # gh CLI via GitHub's official apt repo
+    gnupg \
+    acl \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+       | dd of=/etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+       > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+       gh \
+       openssh-client \
+       rsync \
+       postgresql-client \
+       redis-tools \
+       ripgrep \
+       unzip \
+       tree \
+       bc \
+       wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# yq — lightweight YAML/JSON/TOML processor (static binary, no apt package needed)
+RUN YQ_VER=$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/latest \
+      | grep '"tag_name"' | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/') \
+    && curl -fsSL "https://github.com/mikefarah/yq/releases/download/${YQ_VER}/yq_linux_amd64" \
+       -o /usr/local/bin/yq \
+    && chmod +x /usr/local/bin/yq
+
+# Install Playwright system dependencies + common crawl4ai runtime deps
+# NOTE: Debian 13 renamed several packages with t64 suffix (time64 transition)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0t64 \
+    libnss3 \
+    libnspr4 \
+    libdbus-1-3 \
+    libatk1.0-0t64 \
+    libatk-bridge2.0-0t64 \
+    libcups2t64 \
+    libdrm2 \
+    libxcb1 \
+    libxkbcommon0 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2t64 \
+    libatspi2.0-0t64 \
+    # python3.13-venv: ensurepip bootstrap for test.sh auto-selection of python3.13
+    python3.13-venv \
+    && rm -rf /var/lib/apt/lists/*
+# Create /etc/ssh so workspace tests that probe system-root paths work in this
+# container (test_remote_terminal_workspace_system_roots_still_reject is
+# parametrized on /etc/ssh), then install crawl4ai and graphify (structural
+# code graph — post-commit hook already wired in .husky/post-commit).
+# AST-only extraction runs without any LLM API key; semantic passes use
+# ANTHROPIC_API_KEY when set. Package name on PyPI is "graphifyy" (two y's);
+# CLI command is "graphify". Versions pinned to what the cloud:stable base
+# ships (hadolint DL3013/DL3059).
+RUN mkdir -p /etc/ssh \
+    && pip install --no-cache-dir crawl4ai==0.9.2 graphifyy==0.9.42
+
+# Bake sitecustomize.py so every Python process in this container starts with
+# umask 0o002.  This fires before any application code (including the
+# hermes_cli/config.py os.umask(0o007) call that was leaving files at 0o600).
+# All subprocesses (pnpm, Node, bash) inherit the umask on fork.
+# See scripts/sitecustomize.py for the full rationale.
+COPY scripts/sitecustomize.py /usr/local/lib/python3.11/site-packages/sitecustomize.py
+
+# Download Chromium browser for Playwright (used by crawl4ai), then install
+# Hermes' local browser driver. `agent-browser install` uses the shared cache
+# above; Python Playwright already installs the required Debian libraries.
+RUN crawl4ai-setup || true
+RUN python -m playwright install chromium --with-deps
+RUN node -e 'if (Number(process.versions.node.split(".")[0]) < 24) { throw new Error("agent-browser@0.33.2 requires Node.js 24+") }' \
+    && npm install --global agent-browser@0.33.2 \
+    && agent-browser install \
+    && agent-browser --version
+
+# The bundled full Chromium build currently exits during crashpad startup in
+# this container, before it exposes DevToolsActivePort. The matching headless
+# shell is healthy and supports navigation, snapshots, and screenshots. Expose
+# it through a stable path so browser tooling does not depend on Playwright's
+# versioned cache directory names.
+RUN set -eux; \
+    headless_shell="$(find /opt/hermes/.playwright -type f \
+      -path '*/chrome-headless-shell-linux64/chrome-headless-shell' \
+      -print | sort -V | tail -1)"; \
+    test -n "$headless_shell"; \
+    test -x "$headless_shell"; \
+    ln -sfn "$headless_shell" /opt/hermes/chrome-headless-shell
+ENV AGENT_BROWSER_EXECUTABLE_PATH=/opt/hermes/chrome-headless-shell
+
+# ---------------------------------------------------------------------------
+# mem0_oss memory provider deps — baked so the self-hosted long-term memory
+# (mem0ai + Qdrant) is available from first boot without a boot-time pip
+# install. Versions match the hermes-agent [mem0] extra (mem0ai==2.0.10) and
+# the upstream resolution (qdrant-client 1.19.0, protobuf <7). The upstream
+# cloud image bakes these too once the fox-in-the-box mem0 PR ships;
+# scripts/hermes-fox-entrypoint.sh stays as the idempotent fallback for
+# images built before this layer.
+RUN pip install --no-cache-dir mem0ai==2.0.10 qdrant-client==1.19.0
+
+# ---------------------------------------------------------------------------
+# mem0ai explicit-config precedence (Vulpy patch). Stock mem0ai checks
+# OPENROUTER_API_KEY from the ambient environment BEFORE the explicitly
+# configured api_key/openai_base_url, silently hijacking mem0 traffic to
+# openrouter.ai whenever any unrelated tooling in the same process has an OR
+# key set. Patch: OpenRouter routing only when mem0 has no explicit endpoint/
+# credentials — explicit config always wins over ambient env.
+COPY extensions/hermes-agent-patches/patch-mem0-openai-explicit-config-precedence.py /tmp/patch-mem0-openai-precedence.py
+RUN python3 /tmp/patch-mem0-openai-precedence.py /usr/local/lib/python3.11/site-packages/mem0/llms/openai.py \
+    && rm /tmp/patch-mem0-openai-precedence.py
+
+# Qdrant SERVER binary upgrade: the base image ships qdrant 1.9.x whose query
+# API predates what mem0ai's qdrant-client 1.19 uses (POST /points/query →
+# 404). Install the matching 1.19.0 server over it; supervisord runs
+# /app/qdrant/qdrant, so the swap takes effect on container start.
+ADD https://github.com/qdrant/qdrant/releases/download/v1.19.0/qdrant-x86_64-unknown-linux-gnu.tar.gz /tmp/qdrant-server.tar.gz
+RUN tar xzf /tmp/qdrant-server.tar.gz -C /app/qdrant/ \
+    && chmod 755 /app/qdrant/qdrant \
+    && rm /tmp/qdrant-server.tar.gz
+
+# ---------------------------------------------------------------------------
+# mem0_oss Qdrant SERVER support (Vulpy patch). The mem0_oss plugin hardcodes
+# embedded on-disk Qdrant (path + on_disk), which takes an EXCLUSIVE file lock.
+# When gateway + WebUI both run in this container (the standard topology) they
+# fight over that lock -> "Qdrant lock still held" -> memory writes/reads fail
+# intermittently. This patcher adds MEM0_OSS_QDRANT_URL/HOST/PORT/API_KEY so
+# mem0 can use the shared Qdrant server over HTTP (no file lock) when configured,
+# falling back to embedded for backward compatibility.
+COPY extensions/hermes-agent-patches/patch-mem0-oss-qdrant-server.py /tmp/patch-mem0-oss-qdrant-server.py
+RUN python3 /tmp/patch-mem0-oss-qdrant-server.py /app/hermes-agent/plugins/memory/mem0_oss/__init__.py \
+    && rm /tmp/patch-mem0-oss-qdrant-server.py
+
+# ---------------------------------------------------------------------------
+# mem0_oss Vulpy gateway provider (Vulpy patch). Adds `provider: vulpy` to the
+# mem0_oss memory plugin: extraction LLM defaults to `vulpy-default`, embedder
+# to `vulpy-embed` (titan-embed-text-v2 behind the gateway alias, 1024 dims),
+# credentials resolved from the shared Vulpy chain (VULPY_API_KEY env or the
+# Hermes auth registry). mem0 then rides the same gateway + credential
+# boundary as every other client — no bespoke aux config needed.
+COPY extensions/hermes-agent-patches/patch-mem0-oss-vulpy-gateway.py /tmp/patch-mem0-oss-vulpy-gateway.py
+RUN python3 /tmp/patch-mem0-oss-vulpy-gateway.py /app/hermes-agent/plugins/memory/mem0_oss/__init__.py \
+    && rm /tmp/patch-mem0-oss-vulpy-gateway.py
+
+# ---------------------------------------------------------------------------
+# Vulpy model provider profile — registers the Vulpy LLM gateway as a first-
+# class Hermes provider instead of a generic OpenAI-compatible custom endpoint.
+# This lets the provider profile supply per-alias output caps (e.g.
+# vulpy-default -> 8192) so reasoning models do not fall back to Hermes' bare
+# 4096-token default and enter continuation loops.
+# ---------------------------------------------------------------------------
+COPY extensions/hermes-model-providers/vulpy /app/hermes-agent/plugins/model-providers/vulpy
+
+# ---------------------------------------------------------------------------
+# Vulpy context-metadata patch — the registered provider profile maps the
+# gateway URL to provider `vulpy` (a *known* provider), so agent/model_metadata.py
+# skips the authenticated /models probe and falls back to the 256K default,
+# compressing large sessions prematurely. This patch inserts a step-5 `vulpy`
+# branch that resolves per-alias max_input_tokens from the live gateway
+# /v1/models listing via the existing authenticated endpoint-metadata path.
+# ---------------------------------------------------------------------------
+COPY extensions/hermes-agent-patches/patch-vulpy-context-metadata.py /tmp/patch-vulpy-context-metadata.py
+RUN python3 /tmp/patch-vulpy-context-metadata.py /app/hermes-agent/agent/model_metadata.py \
+    && rm /tmp/patch-vulpy-context-metadata.py
+
+# ---------------------------------------------------------------------------
+# Vulpy gateway usage.cost passthrough — the LiteLLM gateway returns exact
+# per-call USD spend in the chat-completions usage.cost field; Hermes was
+# discarding it (transport + normalize_usage + conversation-loop accounting),
+# so session cost stayed $0 and the WebUI cost badge / insights showed
+# nothing. This patch carries usage.cost into CanonicalUsage.actual_cost_usd
+# and prefers it over the models.dev-style estimate (which is unknown for
+# vulpy-* aliases). See patch-vulpy-usage-cost.py docstring for the four
+# exact-anchor substitutions.
+# ---------------------------------------------------------------------------
+COPY extensions/hermes-agent-patches/patch-vulpy-usage-cost.py /tmp/patch-vulpy-usage-cost.py
+RUN python3 /tmp/patch-vulpy-usage-cost.py /app/hermes-agent \
+    && rm /tmp/patch-vulpy-usage-cost.py
+
+# ---------------------------------------------------------------------------
+# Vulpy WebUI extensions — baked into the fox-overlay so they survive restarts
+# and appear as manageable extensions in Settings → Extensions.
+# ---------------------------------------------------------------------------
+COPY extensions/hermes-webui/manifest.json       /app/fox-overlay/webui_static/manifest.json
+COPY extensions/hermes-webui/message-renderer.js /app/fox-overlay/webui_static/message-renderer.js
+# Feature bundle: the Vulpy experience (core, welcome, side panel, env
+# context/actions, profile switcher) ships in BOTH core and pro images —
+# only the predefined role profiles (Multi-Agent Pack) are paid.
+COPY extensions/hermes-webui/features            /app/fox-overlay/webui_static/features
+# Onboarding/asset bundle: static images served under /extensions/images/.
+COPY extensions/hermes-webui/images              /app/fox-overlay/webui_static/images
+# Extension assets must stay world-readable: agent-written checkout files
+# mode 600, and Docker COPY preserves source modes — root-owned 600 files
+# would be unreadable by the non-root WebUI server process.
+# Pro edition: overlay any additional package-owned features from the
+# distribution exporter (starter-pack / multi-agent-pack).
+RUN chmod -R a+rX /app/hermes-agent/plugins/model-providers/vulpy \
+    && if [ "${VULPY_EDITION}" = "pro" ]; then \
+         cp -a /opt/vulpy/packages/starter-pack/extensions/hermes-webui/features/. \
+           /app/fox-overlay/webui_static/features/ 2>/dev/null || true; \
+       fi \
+    && chmod 644 /app/fox-overlay/webui_static/message-renderer.js \
+    && chmod -R a+rX /app/fox-overlay/webui_static/features \
+    && chmod -R a+rX /app/fox-overlay/webui_static/images
+ENV HERMES_WEBUI_EXTENSION_MANIFEST=manifest.json
+
+# Patch the baked WebUI shell at build time:
+# 1. brand-webui.py: set default theme to light, brand every browser-title path
+#    (including Python-generated login/restart pages), replace favicon/PWA set.
+# 2. patch-ui.js.py: inject the message-renderer extension seam into ui.js.
+COPY extensions/hermes-webui/scripts/ /tmp/webui-patches/
+COPY extensions/hermes-webui/branding               /tmp/vulpy-webui-branding
+RUN python3 /tmp/webui-patches/brand-webui.py /app/hermes-webui /tmp/vulpy-webui-branding \
+    && rm -rf /tmp/webui-patches/brand-webui.py /tmp/vulpy-webui-branding
+COPY extensions/hermes-webui/patch-ui.js.py /tmp/patch-ui.js.py
+COPY extensions/hermes-webui/host-transcript-store.js /tmp/host-transcript-store.js
+RUN python3 /tmp/patch-ui.js.py \
+        /app/hermes-webui/static/ui.js \
+    && rm /tmp/patch-ui.js.py /tmp/host-transcript-store.js
+
+# Vulpy Commerce Browser tab: extend the host workspace active-tab state with
+# the runtime-injected Browser tab. The patcher is exact-anchor/idempotent and
+# fails the image build if the upstream switcher shape changes.
+
+RUN python3 /tmp/webui-patches/patch-webui-workspace-browser.py \
+        /app/hermes-webui/static/workspace.js \
+    && rm /tmp/webui-patches/patch-webui-workspace-browser.py
+
+# Mission order: pinned Vulpy missions sort by mission_order (0 first) on
+# the sidebar instead of newest-first timestamp.
+RUN python3 /tmp/webui-patches/patch-webui-mission-order.py \
+    && rm /tmp/webui-patches/patch-webui-mission-order.py
+
+# CSP self-origin: allow the WebUI's own serving origin in connect-src /
+# frame-src so side-panel iframe tabs work on any public edge hostname.
+RUN python3 /tmp/webui-patches/patch-webui-self-origin-csp.py \
+    && rm /tmp/webui-patches/patch-webui-self-origin-csp.py
+
+# CSP frame-ancestors: make who-may-embed-the-WebUI configurable via
+# HERMES_WEBUI_CSP_FRAME_ANCESTORS_EXTRA (default 'none' when unset, so the
+# lockdown is unchanged unless an operator opts in, e.g. a demo shell iframe).
+RUN python3 /tmp/webui-patches/patch-webui-csp-frame-ancestors.py \
+    /app/hermes-webui/api/helpers.py \
+    && rm /tmp/webui-patches/patch-webui-csp-frame-ancestors.py
+
+# Extensions media path: /extensions/ MEDIA refs serve same-origin directly
+# instead of api/media (which 404s them outside its allowed roots).
+RUN python3 /tmp/webui-patches/patch-webui-extensions-media-path.py \
+    && rm /tmp/webui-patches/patch-webui-extensions-media-path.py
+
+# ---------------------------------------------------------------------------
+# Push approval guardrail (issue #93): make ANY `git push` trigger the
+# dangerous-command approval popup (DANGEROUS_PATTERNS in tools/approval.py).
+# The patch script fails the build loudly if the anchor moves (upgrade drift),
+# so the guardrail can never silently disappear.
+# ---------------------------------------------------------------------------
+COPY extensions/hermes-push-guardrail/patch-approval.py /tmp/patch-approval.py
+RUN python3 /tmp/patch-approval.py /app/hermes-agent/tools/approval.py && rm /tmp/patch-approval.py
+
+# ---------------------------------------------------------------------------
+# Narrow the "delete in root path" approval so `rm /tmp/<file>` (single,
+# non-recursive) stops popping a false approval positive, while recursive
+# (-r/-rf), glob (/tmp/*), and non-/tmp absolute-path deletes stay gated.
+# Same fail-loud contract as patch-approval.py above.
+# ---------------------------------------------------------------------------
+COPY extensions/hermes-push-guardrail/patch-approval-tmp-rm.py /tmp/patch-approval-tmp-rm.py
+RUN python3 /tmp/patch-approval-tmp-rm.py /app/hermes-agent/tools/approval.py && rm /tmp/patch-approval-tmp-rm.py
+
+# ---------------------------------------------------------------------------
+# Fox-overlay patch-anchor gate: run every agent monkey-patch's apply()
+# against the baked hermes-agent NOW, at build time. Upstream refactors break
+# exact-source anchors; historically that surfaced as one WARNING at boot and
+# silently broken chats (runs dying with infinite typing dots). Failing the
+# build here makes the drift loud and immediate — bump the base image pin
+# deliberately and refresh the anchor (or mark the patch absorbed) in the
+# same change. The same check re-runs at container boot via
+# scripts/hermes-fox-entrypoint.sh for defense in depth.
+# ---------------------------------------------------------------------------
+COPY extensions/hermes-agent-patches/patch-fox-overlay-drift.py /tmp/patch-fox-overlay-drift.py
+RUN python3 /tmp/patch-fox-overlay-drift.py && rm /tmp/patch-fox-overlay-drift.py
+
+# Umask hardening (2026-08-26): hermes_cli/config.py flips umask to 0o007
+# during config init, so agent files written in that window land 600/660 —
+# no group access. On shared-GID installs the host deploy user then cannot
+# git-add/pull/stash over them ("cannot hash ... Permission denied"). Force
+# 0o002 so agent-written files are always group-rw, regardless of write time.
+COPY extensions/hermes-agent-patches/patch-hermes-umask.py /tmp/patch-hermes-umask.py
+RUN python3 /tmp/patch-hermes-umask.py && rm /tmp/patch-hermes-umask.py
+COPY scripts/check-fox-overlay-patches.py /tmp/check-fox-overlay-patches.py
+RUN python3 /tmp/check-fox-overlay-patches.py && rm /tmp/check-fox-overlay-patches.py
+
+# ---------------------------------------------------------------------------
+# Empty tool_calls guard (2026-08-18): the pre-call sanitizer dedup step
+# (agent_runtime_helpers.py:pre_call_message_sanitizer) can write
+# tool_calls: [] into a message when ALL tool calls are duplicates, which
+# DeepSeek V4 Flash rejects with HTTP 400.  Drop the key instead of
+# emitting an empty array.  Fails loudly on anchor drift.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-agent-empty-tool-calls.py /app/hermes-agent/agent/agent_runtime_helpers.py && rm /tmp/webui-patches/patch-agent-empty-tool-calls.py
+
+# ---------------------------------------------------------------------------
+# Continuation-scaffolding cleanup (2026-08-19): the output-length recovery
+# loop injects interim assistant fragments + [System: ...] continuation
+# nudges.  On success these pairs are folded into the final response but
+# stayed in the transcript, creating an assistant->assistant adjacency that
+# causes the model to "see" a stale [System: ...] on the next user turn.
+# Strip the trailing pair after the thinking-prefill pop, before appending
+# final_msg.  Fails loudly on anchor drift.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-agent-strip-continuation-scaffolding.py /app/hermes-agent/agent/conversation_loop.py && rm /tmp/webui-patches/patch-agent-strip-continuation-scaffolding.py
+
+# ---------------------------------------------------------------------------
+# Length-continuation resilience (2026-08-19): the output-length recovery
+# loop retried 4x with the SAME max_tokens budget, then returned partial
+# ("Try again.") without consulting the fallback chain.  Boost max_tokens
+# exponentially on each continuation retry (same as the tool-call path) and
+# try the fallback provider after the 4th retry.  Fails loudly on anchor
+# drift — keep anchors in sync with the installed hermes-agent version
+# (see the patch script header).
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-agent-length-continuation-boost.py /app/hermes-agent/agent/conversation_loop.py && rm /tmp/webui-patches/patch-agent-length-continuation-boost.py
+
+# Bounded provider-agnostic compression admission: refuse unsafe synchronous
+# compaction before it can monopolize the request/SSE process.
+
+RUN python3 /tmp/webui-patches/patch-compression-admission.py /app/hermes-agent/agent/conversation_compression.py && rm /tmp/webui-patches/patch-compression-admission.py
+
+# Recover missing/closed state.db handles with bounded retries and explicit
+# persistence errors; preserve append ordering and never claim success on failure.
+
+RUN python3 /tmp/webui-patches/patch-session-db-recovery.py /app/hermes-agent/hermes_state.py && rm /tmp/webui-patches/patch-session-db-recovery.py
+
+# ---------------------------------------------------------------------------
+# Frontend tools (#144): register the create_chart stub on the api_server
+# platform. Writes tools/frontend_tools.py (auto-discovered via
+# registry.register) and adds the static "frontend" toolset to the
+# hermes-api-server composite in toolsets.py. Fails loudly on anchor drift.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-agent-frontend-tools.py \
+        /app/hermes-agent/toolsets.py \
+        /app/hermes-agent/tools \
+    && rm /tmp/webui-patches/patch-agent-frontend-tools.py
+
+# ---------------------------------------------------------------------------
+# Native run-events fan-out + session active-run lookup (issue: native pane
+# streaming, Phase 2).  Converts the single-consumer run-events queue into a
+# set of per-subscriber queues (fan-out) so the WebUI gateway bridge and the
+# assistant-ui pane can both subscribe to the same run simultaneously.  Also
+# adds GET /api/sessions/{session_id}/active-run so the pane can discover
+# which run to subscribe to natively without any shared state on the browser.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-api-server-runs-fanout.py /app/hermes-agent/gateway/platforms/api_server.py \
+    && rm /tmp/webui-patches/patch-api-server-runs-fanout.py
+
+# ---------------------------------------------------------------------------
+# SSE keep-alive + proxy idle-read fixes (2026-08-12): the api_server's
+# runs-events keep-alive was 30s but the WebUI sidecar proxy's upstream read
+# timeout is 10s, so quiet stretches (thinking, long tool runs) killed the
+# pane's live stream (149 proxy failures / 48 timeouts observed).  Lower the
+# keep-alive to 5s (below the proxy timeout) and teach the proxy to treat idle
+# reads as "keep waiting" for event-stream content — defense in depth against
+# any intermediary with a short idle timeout, not just the WebUI proxy.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-api-server-runs-heartbeat.py /app/hermes-agent/gateway/platforms/api_server.py \
+    && rm /tmp/webui-patches/patch-api-server-runs-heartbeat.py
+# NOTE: patch-webui-sidecar-proxy-sse-idle.py REMOVED (2026-08-14) — its target
+# (the streaming `_stream_extension_sidecar_proxy_response` with a
+# `chunk = response.read(chunk_size)` loop) was refactored away upstream; the
+# sidecar proxy is now buffered-only via _read_extension_sidecar_proxy_body.
+# The pane's SSE streaming restore (proxy SSE path for text/event-stream) is a
+# NEW patcher tracked in the optimistic-UI batch — see
+# .work/tasks/optimistic-ui-event-bus.md.
+
+# ---------------------------------------------------------------------------
+# Native pending-approval read for gateway mode (2026-08-12): with
+# webui_chat_backend=gateway the agent (and its approval state) runs in the
+# gateway process, so the WebUI's /api/approval/pending polled its own empty
+# store and actively HID approval cards — commands waited the full 300s
+# invisible-approval timeout then BLOCKED.  The gateway now stamps a stable
+# approval_id and serves GET /v1/runs/{run_id}/approval; the WebUI polls that
+# natively instead of the local (empty) mirror.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-approval-gateway-read.py \
+        /app/hermes-agent/gateway/platforms/api_server.py \
+        /app/hermes-webui/api/runner_client.py \
+        /app/hermes-webui/api/routes.py \
+    && rm /tmp/webui-patches/patch-approval-gateway-read.py
+
+# #136 gateway-mode: durable session YOLO (gateway /v1/yolo endpoint + WebUI
+# durable store + boot-time re-apply) and deny-reason relay to the gateway.
+
+RUN python3 /tmp/webui-patches/patch-approval-yolo-durable.py \
+        /app/hermes-agent/gateway/platforms/api_server.py \
+        /app/hermes-webui/api/runner_client.py \
+        /app/hermes-webui/api/routes.py \
+        /app/hermes-webui/server.py \
+    && rm /tmp/webui-patches/patch-approval-yolo-durable.py
+
+# #136 gateway-mode legacy surfaces: WebUI steer-forward + cross-session
+# approvals + read-only children sidebar; global approval banner (round 4 wiring).
+
+RUN python3 /tmp/webui-patches/patch-webui-gateway-legacy-surfaces.py \
+        /app/hermes-webui/api/runner_client.py \
+        /app/hermes-webui/api/streaming.py \
+        /app/hermes-webui/api/routes.py \
+    && rm /tmp/webui-patches/patch-webui-gateway-legacy-surfaces.py
+
+RUN python3 /tmp/webui-patches/patch-webui-global-approval-banner.py \
+        /app/hermes-webui/static/messages.js \
+    && rm /tmp/webui-patches/patch-webui-global-approval-banner.py
+
+# Vulpy Cloud provider display name: register "vulpy" in the WebUI's static
+# _PROVIDER_DISPLAY map so every model-catalog builder renders "Vulpy Cloud"
+# for the gateway provider group (the plugin-aware path would otherwise be
+# skipped and the label fell back to title-case "Vulpy").
+
+RUN python3 /tmp/webui-patches/patch-webui-vulpy-display-name.py /app/hermes-webui/api/config.py \
+    && rm /tmp/webui-patches/patch-webui-vulpy-display-name.py
+
+# Vulpy Cloud model labels: wire profile.model_labels (defined in the vulpy
+# provider plugin) through api/plugin_providers.py + api/config.py so the
+# picker shows friendly names ("DeepSeek V4 Flash") instead of raw gateway
+# aliases. The gateway's /v1/models is OpenAI-shaped (id only), so labels
+# live in the plugin.
+
+RUN python3 /tmp/webui-patches/patch-webui-vulpy-model-labels.py \
+        /app/hermes-webui/api/config.py \
+        /app/hermes-webui/api/plugin_providers.py \
+    && rm /tmp/webui-patches/patch-webui-vulpy-model-labels.py
+
+# Vulpy Cloud reasoning-effort chip: register vulpy-* models in the WebUI's
+# heuristic reasoning-effort resolver so the composer shows the reasoning
+# chip for Vulpy aliases (which route to DeepSeek V4 Flash, Claude Sonnet 4,
+# Kimi K3 — all reasoning-capable).
+
+RUN python3 /tmp/webui-patches/patch-webui-vulpy-reasoning.py /app/hermes-webui/api/config.py \
+    && rm /tmp/webui-patches/patch-webui-vulpy-reasoning.py
+
+# Vulpy Cloud provider settings: `vulpy` is a REGISTERED model-provider
+# profile (bundled plugin) that also appears in WebUI's static display map,
+# so is_plugin_model_provider() (plugin-only) is False and the plugin
+# discovery path suppresses its profile env var + live/fallback models. This
+# patcher adds a SEPARATE registered-profile path (registered_* helpers in
+# api/plugin_providers.py) that does NOT depend on plugin-only semantics:
+#   - Settings → Providers resolves the Vulpy API key via VULPY_API_KEY (the
+#     profile's declared primary env var);
+#   - get_providers() surfaces the registered profile's live catalog, falling
+#     back to profile.fallback_models, and applies profile.model_labels;
+#   - the existing plugin-only model branch and the generic POST
+#     /api/models/refresh invalidation are untouched.
+
+RUN python3 /tmp/webui-patches/patch-webui-vulpy-provider-settings.py \
+        /app/hermes-webui/api/providers.py \
+        /app/hermes-webui/api/plugin_providers.py \
+    && rm /tmp/webui-patches/patch-webui-vulpy-provider-settings.py
+
+# Vulpy Cloud provider card: remove the Show/Hide API-key reveal toggle.
+# The toggle is non-functional for Vulpy (revealing an already-rotated
+# VULPY_API_KEY adds no value and risks visual key exposure). The removal is
+# VULPY-ONLY: the configurable-provider branch is shared by every API-key
+# provider, so the patcher wraps the toggle creation + append in a
+# `p.id!=='vulpy'` guard. OpenRouter and all other providers keep their
+# working toggle. The API key input stays type=password / autocomplete=off;
+# Save (POST /api/providers), Remove, and Refresh models are untouched.
+
+RUN python3 /tmp/webui-patches/patch-webui-vulpy-remove-show.py \
+        /app/hermes-webui/static/panels.js \
+    && rm /tmp/webui-patches/patch-webui-vulpy-remove-show.py
+
+# ---------------------------------------------------------------------------
+# Hermes Event Bus host emits (#142, optimistic UI): inject the HermesBus
+# singleton + _hermesBusEmit helper at the top of ui.js (loads first) and
+# emit calls at the host lifecycle anchors — message-sent / run-started /
+# run-completed (done|cancel|error) in messages.js, session-changed in
+# sessions.js (_setActiveSessionUrl — every session-change path funnels
+# through it), steer-sent in commands.js. The assistant-ui pane subscribes
+# and renders instantly instead of waiting for the settled poll.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-event-bus.py \
+        /app/hermes-webui/static/ui.js \
+        /app/hermes-webui/static/sessions.js \
+        /app/hermes-webui/static/commands.js \
+        /app/hermes-webui/static/messages.js \
+    && rm /tmp/webui-patches/patch-webui-event-bus.py
+
+# ---------------------------------------------------------------------------
+# MEDIA token boundary (2026-08-29): only STANDALONE MEDIA:<abs-path-or-url>
+# is treated as media; prose/inline-code mentions like `MEDIA:` stay literal
+# text instead of becoming 📎 attachment links. Fail-loud + idempotent.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-media-tokens.py \
+        /app/hermes-webui/static/ui.js \
+    && rm /tmp/webui-patches/patch-webui-media-tokens.py
+
+RUN python3 /tmp/webui-patches/patch-webui-markdown-media.py \
+        /app/hermes-webui/static/ui.js \
+    && rm /tmp/webui-patches/patch-webui-markdown-media.py
+
+# ---------------------------------------------------------------------------
+# Markdown MEDIA server support (2026-08-30): allow .md/.markdown/.mdx through
+# /api/media for the session-media token allow-list (MIME map + text/markdown)
+# and strip trailing ** / * from token refs so **MEDIA:/x.md** resolves.
+# Fail-loud + idempotent.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-markdown-media-server.py \
+        /app/hermes-webui/api \
+    && rm /tmp/webui-patches/patch-webui-markdown-media-server.py
+
+# ---------------------------------------------------------------------------
+# Frontend tools (#144): inject the registry-derived frontend-tools block
+# into the gateway runs-request instructions so the model knows the pane can
+# render charts client-side. Reads $HERMES_WEBUI_EXTENSION_DIR/.../registry.json
+# at request time; no-op when the registry is missing. Fails loudly on anchor
+# drift.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-frontend-tools.py \
+        /app/hermes-webui/api/gateway_chat.py \
+    && rm /tmp/webui-patches/patch-webui-frontend-tools.py
+
+# ---------------------------------------------------------------------------
+# Per-session WebUI access-mode propagation: the browser client POSTs its
+# actual page origin ({session_id, mode, origin} — tailscale/public/local)
+# to POST /api/access-mode, the server persists it per session under
+# .agent/access-mode/<session_id>.json, and _webui_ephemeral_system_prompt()
+# appends a COMPACT per-session access-mode block to EVERY agent run so link
+# replies match the operator's real access path (fixes the flawed global
+# "prefer Tailscale whenever the sidecar is up" rule, f9dd6975). The seam
+# covers the default legacy in-process backend AND both gateway paths.
+# Fails loudly on anchor drift.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-access-mode.py \
+        /app/hermes-webui/api/routes.py \
+        /app/hermes-webui/api/streaming.py \
+    && rm /tmp/webui-patches/patch-webui-access-mode.py
+
+# ---------------------------------------------------------------------------
+# Stream tool args (#144 follow-up): frontend tools (charts) must render
+# WHILE the tool is running, not only after the settled poll. The gateway's
+# tool-progress start payload carries no args, and gateway_chat.py drops
+# non-dict args — both patched so streaming args (dict or JSON string, under
+# "args"/"arguments") reach the pane live. Fails loudly on anchor drift.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-stream-tool-args.py \
+        /app/hermes-agent/gateway/platforms/api_server.py \
+        /app/hermes-webui/api/gateway_chat.py \
+    && rm /tmp/webui-patches/patch-stream-tool-args.py
+
+# ---------------------------------------------------------------------------
+# WebUI sidecar proxy auth re-injection (2026-08-14): parallel rewrite of the
+# extension sidecar dropped the server-side Bearer injection — every API-server
+# call through the proxy arrived unauthenticated → 401 and the pane showed no
+# messages. Restores Bearer forwarding in extensions.py and routes.py.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-sidecar-proxy-auth.py \
+        /app/hermes-webui/api/extensions.py \
+        /app/hermes-webui/api/routes.py \
+    && rm /tmp/webui-patches/patch-webui-sidecar-proxy-auth.py
+
+# ---------------------------------------------------------------------------
+# Sidecar proxy SSE pass-through (#142): the proxy is buffered-only
+# (_read_extension_sidecar_proxy_body reads the whole body), so an infinite
+# text/event-stream upstream (the pane's EventSource to /v1/runs/{id}/events)
+# blocks a handler thread up to the 10s timeout → 502 → reconnect → thread-pool
+# exhaustion → page freeze. Restores a streaming path for text/event-stream
+# responses (filtered headers, close_connection, end_sse_headers, 10s idle
+# keep-waiting reset per chunk). Buffered path untouched for everything else.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-sidecar-proxy-sse-stream.py \
+        /app/hermes-webui/api/routes.py \
+    && rm /tmp/webui-patches/patch-webui-sidecar-proxy-sse-stream.py
+
+# ---------------------------------------------------------------------------
+# Sidecar proxy max response bytes (2026-08-14): the extension sidecar proxy
+# buffers whole upstream responses capped at 512 KiB; the message-renderer
+# pane's session polls (40 full messages) exceed that on heavy transcripts →
+# 502 {"error": "Extension sidecar response too large"} until compaction
+# shrinks the payload. Bump default to 8 MiB + HERMES_WEBUI_SIDECAR_MAX_RESPONSE_BYTES
+# override (read in routes.py, so tuning needs no rebuild).
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-sidecar-proxy-max-response.py \
+        /app/hermes-webui/api/routes.py \
+    && rm /tmp/webui-patches/patch-webui-sidecar-proxy-max-response.py
+
+# ---------------------------------------------------------------------------
+# loadSession pane short-path (2026-08-14): when the assistant-ui pane owns
+# the transcript, skip the expensive host-transcript work on every session
+# switch (draft save, INFLIGHT snapshot, scroll reset, render-window expansion)
+# — visible as "browser laggy" on 1000+ message threads. The pane reads its
+# own bounded tail; the host only needs metadata + stream teardown/rearm.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-loadsession-short-path.py \
+        /app/hermes-webui/static/sessions.js \
+    && rm /tmp/webui-patches/patch-webui-loadsession-short-path.py
+
+# ---------------------------------------------------------------------------
+# Cross-session stream-leak guards (2026-08-16): the pane short path closes
+# the old session's per-turn chat stream; these host-side guards are defense
+# in depth so an abandoned /api/chat/stream can never render into a different
+# session's pane (closeLiveStream stale-global cleanup, _doRender and
+# _restoreSettledSession pane guards, appendThinking owner guard).
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-stream-switch-leak.py \
+        /app/hermes-webui/static/messages.js \
+        /app/hermes-webui/static/ui.js \
+    && rm /tmp/webui-patches/patch-webui-stream-switch-leak.py
+
+# ---------------------------------------------------------------------------
+# YOLO pill pending-confirm state (security follow-up MEDIUM, 2026-08-26):
+# durable yolo (patch-approval-yolo-durable.py) marks a session's persisted
+# YOLO as pending_confirm after a restart — the flag survives but auto-approve
+# does NOT re-arm until the user toggles again. The pill ignored that flag and
+# showed plain-active, telling the operator approvals were skipped when they
+# were not. Adds: _yoloPendingConfirm state from GET /api/session/yolo, a
+# distinct amber .yolo-pending pill state (+ pending tooltip with an English
+# fallback when the i18n bundle lacks the key), and a confirm-aware click
+# wrapper (_yoloPillConfirmClick) so clicking the pill while pending RE-ARMS
+# instead of letting cmdYolo's read-then-toggle disable it. Rewires the pill's
+# onclick in index.html too. Fails loudly on anchor drift.
+#
+# ORDERING: messages.js patcher — must stay before patch-webui-send-wait-
+# session.py (the last messages.js patch in this build).
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-yolo-pill-confirm.py \
+        /app/hermes-webui/static/messages.js \
+        /app/hermes-webui/static/index.html \
+    && rm /tmp/webui-patches/patch-webui-yolo-pill-confirm.py
+
+# ---------------------------------------------------------------------------
+# Stream-finalize integrity patch (2026-08-26): the patcher composes with the
+# boot-time paint-first patch below. Keep it in the image as a tool; do NOT run
+# it here against the pristine upstream messages.js, because its anchor is the
+# paint-first output rather than the upstream settle block.
+# ---------------------------------------------------------------------------
+COPY extensions/hermes-webui/scripts/patch-webui-stream-finalize-settle.py /usr/local/bin/patch-webui-stream-finalize-settle.py
+
+# Session-store bounds (2026-08-26): cap persisted bodies, cache parsed session
+# files, and serve stale session-list data during rebuild lock contention.
+# Retention is dry-run by default and archives oversized sessions only with
+# explicit --apply; it never deletes request dumps.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-session-store-bounds.py \
+        /app/hermes-webui/api/models.py \
+    && rm /tmp/webui-patches/patch-session-store-bounds.py
+
+RUN python3 /tmp/webui-patches/patch-session-list-cache-stale-on-wait.py \
+        /app/hermes-webui/api/routes.py \
+        /app/hermes-webui/api/route_session_list_cache.py \
+    && rm /tmp/webui-patches/patch-session-list-cache-stale-on-wait.py
+
+RUN python3 /tmp/webui-patches/patch-session-list-cache-background-rebuild.py \
+        /app/hermes-webui/api/routes.py \
+    && rm /tmp/webui-patches/patch-session-list-cache-background-rebuild.py
+COPY scripts/vulpy-session-retention.sh /usr/local/bin/vulpy-session-retention.sh
+RUN chmod +x /usr/local/bin/vulpy-session-retention.sh
+
+# ---------------------------------------------------------------------------
+# Input/session-sync guard (2026-08-25): after a page refresh the host
+# restores the saved session asynchronously (loadSession). Sending during
+# that window — typing + Enter, send button, suggestion tile, edit/regenerate
+# — used to hit `if(!S.session){await newSession()}` in messages.js send()
+# and spawn a fresh session, silently diverging the transcript from the
+# restored one. Patch send() to wait (bounded) for the restore before
+# falling back to newSession(); the pane's hostSendText has the matching
+# island-side guard. Fails loudly on anchor drift.
+#
+# ORDERING: this patch must run LAST of all messages.js patches — it anchors
+# on `async function send(){` and the `if(!S.session){await newSession();...}`
+# fallback, so any earlier messages.js patch that rewrites send() would move
+# those anchors and this build step would fail loudly. Keep it after every
+# other `.../static/messages.js` RUN (event-bus, stream-switch-leak,
+# global-approval-banner, etc.) — this position is the last messages.js
+# patcher in the build.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-webui-send-wait-session.py \
+        /app/hermes-webui/static/messages.js \
+    && rm /tmp/webui-patches/patch-webui-send-wait-session.py
+
+# ---------------------------------------------------------------------------
+# Run steer + cross-session approvals (#136, gateway mode): WebUI steer-forward
+# adds POST /v1/runs/{run_id}/steer so gateway-mode steering works; approvals
+# listing adds GET /v1/approvals/pending across all sessions so background-run
+# approval cards surface instead of parking invisible.
+# ---------------------------------------------------------------------------
+
+RUN python3 /tmp/webui-patches/patch-api-server-runs-steer.py \
+        /app/hermes-agent/gateway/platforms/api_server.py \
+    && rm /tmp/webui-patches/patch-api-server-runs-steer.py
+
+# Keep the stock entrypoint running as root (matches the base image): it does
+# the pruned workspace chown, /data ownership, and supervisord hand-off as root.
+USER root
+# Build-time user guard (issue #108): Docker resolves the image's Config.User
+# only at container CREATE time, so a trailing USER naming a user missing from
+# the base image (e.g. the 2026-08-10 'USER hermes' — the cloud:stable
+# non-root user is 'foxinthebox') builds fine but yields a container that can
+# never start. The trailing RUN id forces the final USER to be resolved at
+# build time, so an invalid future USER fails the BUILD instead of producing a
+# poison image. Keep this RUN as the very last instruction, after the final
+# USER.
+RUN id

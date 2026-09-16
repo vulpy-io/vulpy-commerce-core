@@ -1,0 +1,41 @@
+{
+  "extensions": [
+    {
+      "id": "message-renderer",
+      "name": "Message Renderer",
+      "description": "Public hermes-webui message-renderer extension (vendored). Replaces the default message transcript rendering. OFF by default since 2026-08-26 (native-first: the native transcript + welcome feature are the product surface; opt in from this panel). Enable/disable any time from this panel.",
+      "enabled": false,
+      "scripts": [
+        "message-renderer.js"
+      ],
+      "sidecar": {
+        "type": "loopback",
+        "origin": "http://127.0.0.1:8642",
+        "health_path": "/health"
+      }
+    },
+    {
+      "id": "vulpy-commerce",
+      "name": "Vulpy Commerce",
+      "description": "All Vulpy Commerce operator UI features (profile switcher, side panel, custom pages). Features live in features/vulpy-commerce-*/ and are referenced here. Enable/disable any time from this panel.",
+      "enabled": true,
+      "scripts": [
+        "features/vulpy-commerce-core/index.js",
+        "features/vulpy-commerce-profile-switcher/index.js",
+        "features/vulpy-commerce-env-context/index.js",
+        "features/vulpy-commerce-env-actions/index.js",
+        "features/vulpy-commerce-side-panel/index.js",
+        "features/vulpy-commerce-welcome/index.js",
+        "features/vulpy-commerce-access-mode/index.js"
+      ],
+      "stylesheets": [
+        "features/vulpy-commerce-core/index.css",
+        "features/vulpy-commerce-env-context/index.css",
+        "features/vulpy-commerce-env-actions/index.css",
+        "features/vulpy-commerce-profile-switcher/index.css",
+        "features/vulpy-commerce-side-panel/index.css",
+        "features/vulpy-commerce-welcome/index.css"
+      ]
+    }
+  ]
+}

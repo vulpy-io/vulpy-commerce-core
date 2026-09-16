@@ -1,0 +1,10 @@
+<svg aria-label="Product image coming soon" role="img" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" >
+  <rect fill="#f4f2ee" height="800" width="800" />
+  <ellipse cx="400" cy="560" fill="#e3dfd7" rx="150" ry="26" />
+  <g fill="none" stroke="#b8a088" stroke-linecap="round" stroke-width="10" >
+    <path d="M330 420 L400 300 L470 420"/>
+    <path d="M340 430 h120"/>
+    <circle cx="400" cy="480" fill="#b8a088" r="14" stroke="none"/>
+  </g>
+  <text fill="#917964" font-family="Georgia, serif" font-size="30" text-anchor="middle" x="400" y="640" >Image coming soon</text>
+</svg>

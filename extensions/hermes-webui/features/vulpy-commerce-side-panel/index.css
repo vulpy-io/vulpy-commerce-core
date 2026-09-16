@@ -1,0 +1,429 @@
+/* Vulpy Commerce — side panel (native workspace Browser tab + compatibility
+ * drawer + toggle + lazy tabbed iframes).
+ *
+ * Loaded after vulpy-commerce-core/index.css; relies on [data-vc] tokens.
+ * Scoped to #vc-panel-root / .vc-panel-* / data-vc-* except the intentional
+ * host .rightpanel overlay override below.
+ * z-index 2147483000 sits above the WebUI app content (max int32 - 647).
+ */
+
+/* ---- native workspace Browser tab ---- */
+.vc-panel-native-browser { display:flex; flex:1; min-height:0; flex-direction:column; gap:8px; padding:8px; }
+/* The author rule above is display:flex — the host sets `hidden` on the whole
+ * Browser view to switch to Files/Artifacts/Todos, and a plain display rule
+ * would defeat the [hidden] attribute and let the Browser controls/caption
+ * leak into the other panels. !important makes the hidden state unambiguous. */
+.vc-panel-native-browser[hidden] { display:none !important; }
+/* Deliberate single flex row: select (flexes to fill) + refresh (fixed 32px).
+ * No wrapping, no extra bars — one visual row for the whole Browser toolbar. */
+.vc-panel-native-browser-controls { display:flex; align-items:center; gap:6px; flex-shrink:0; flex-wrap:nowrap; }
+/* Compact select wrapper: the bare native <select> with an explicit inline
+ * SVG chevron pinned right. pointer-events:none on the chevron so it never
+ * intercepts clicks meant for the select; right padding keeps option text
+ * clear of the chevron. position:relative is the reference for the caret;
+ * flex:1 + min-width:0 lets the select shrink instead of overflowing. */
+.vc-panel-native-browser-select-wrap { position:relative; display:flex; flex:1; min-width:0; }
+.vc-panel-native-browser-select { width:100%; min-width:0; padding:6px 8px 6px 8px; padding-right:26px; border:1px solid var(--border2,#394052); border-radius:6px; background:var(--code-bg,#171a20); color:var(--text,#e8eaf0); font:inherit; appearance:none; -webkit-appearance:none; }
+.vc-panel-native-browser-select-chevron { position:absolute; right:8px; top:50%; transform:translateY(-50%); display:block; width:16px; height:16px; pointer-events:none; color:var(--muted,#9aa3b2); }
+/* Square 32x32 icon-only refresh button, aligned with the select in the same
+ * flex row. display:grid + place-items:center centers the glyph without text
+ * baseline quirks; flex:0 0 32px keeps it a fixed square beside the flexing
+ * select. The inner SVG is block-displayed and explicitly sized 18x18 so it is
+ * plainly visible. */
+.vc-panel-native-browser-refresh { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; padding:0; border:1px solid var(--border2,#394052); border-radius:6px; background:transparent; color:var(--muted,#9aa3b2); cursor:pointer; }
+.vc-panel-native-browser-refresh svg { display:block; width:18px; height:18px; }
+.vc-panel-native-browser-refresh:hover, .vc-panel-native-browser-refresh:focus-visible { color:var(--text,#e8eaf0); border-color:var(--accent,#7cb9ff); }
+.vc-panel-native-frame-wrap { display: flex; flex: 1 1 0%; min-height: 0; position: relative; }
+/* Same hidden-isolation guarantee for the frame wrapper: it owns absolutely
+ * positioned children (progress bar), so a bare display rule must never
+ * resurrect it when the host hides it. */
+.vc-panel-native-frame-wrap[hidden] { display: none !important; }
+/* Sidebar/panel icon inside the host composer workspace button — block-level
+ * so it is vertically centered and never collapses to an invisible 0-height
+ * inline box. Minimum 18x18 rendered size so the glyph is plainly visible in
+ * the composer control. */
+.vc-panel-sidebar-icon { display: block; width: 18px; height: 18px; transition: transform .18s ease; }
+/* Keep the "show workspace panel" button visible in every composer layout
+ * (desktop, narrow cf-burger, mobile) — never collapse it away. */
+.composer-workspace-files-btn { display: inline-flex !important; }
+/* Rotate the sidebar glyph 180° while the workspace panel is open. The host
+ * owns the open state: it sets aria-pressed=true (and .active) on the toggle
+ * in syncWorkspacePanelUI. */
+.composer-workspace-files-btn[aria-pressed="true"] .vc-panel-sidebar-icon,
+.composer-workspace-files-btn.active .vc-panel-sidebar-icon {
+  transform: rotate(180deg);
+}
+
+/* The host hides .rightpanel below 901px, but its workspace toggle still opens
+ * the native panel. Keep that open state as a right-side overlay through the
+ * tablet band as well as on phones. */
+@media (min-width: 641px) and (max-width: 900px) {
+  .rightpanel {
+    display: flex !important;
+    position: fixed !important;
+    --vc-native-panel-width: min(360px, 92vw);
+    right: calc(-1 * var(--vc-native-panel-width)) !important;
+    top: 0;
+    bottom: 0;
+    width: var(--vc-native-panel-width) !important;
+    max-width: 100vw !important;
+    z-index: 200;
+    padding-top: var(--app-titlebar-safe-top, 0px);
+    box-sizing: border-box;
+    transition: right .25s ease;
+    box-shadow: none !important;
+  }
+  .rightpanel.mobile-open {
+    right: 0 !important;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, .4) !important;
+  }
+  .rightpanel .resize-handle { display: none; }
+}
+
+#vc-panel-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none; /* only the drawer/toggle re-enable interaction */
+  font-family: var(--vc-font, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* ---- floating toggle (bottom-right rail button) ---- */
+.vc-panel-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483000;
+  pointer-events: auto;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--vc-border, #333a47);
+  background: var(--vc-accent, #e5484d);
+  color: var(--vc-accent-contrast, #ffffff);
+  cursor: pointer;
+  display: flex !important; /* fox skin may reset button display */
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.vc-panel-toggle:hover {
+  filter: brightness(1.12);
+}
+/* Mobile: raise the toggle one full button height so it clears the
+   composer/input area, and make the native workspace panel full-width when
+   open (the host hides .rightpanel below 901px and opens it as an overlay). */
+@media (max-width: 640px) {
+  .vc-panel-toggle {
+    bottom: 60px;
+  }
+  .rightpanel.mobile-open {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+}
+.vc-panel-toggle-badge {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ---- drawer ---- */
+.vc-panel-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(480px, 92vw);
+  z-index: 2147483000;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--vc-bg, #1a1d24);
+  color: var(--vc-text, #e8eaf0);
+  border-left: 1px solid var(--vc-border, #333a47);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+  transform: translateX(100%);
+  transition: transform 180ms ease;
+}
+#vc-panel-root[data-vc-panel-open="true"] .vc-panel-drawer {
+  transform: translateX(0);
+}
+/* The drawer covers the right edge — hide the toggle while it is open. */
+#vc-panel-root[data-vc-panel-open="true"] .vc-panel-toggle {
+  display: none !important;
+}
+
+/* ---- header ---- */
+.vc-panel-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--vc-space-3, 12px) var(--vc-space-4, 16px);
+  background: var(--vc-bg-elevated, #232833);
+  border-bottom: 1px solid var(--vc-border, #333a47);
+}
+.vc-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vc-text, #e8eaf0);
+}
+.vc-panel-close {
+  border: 0;
+  background: transparent;
+  color: var(--vc-text-muted, #9aa3b2);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.vc-panel-close:hover {
+  color: var(--vc-text, #e8eaf0);
+}
+
+/* ---- tabs ---- */
+.vc-panel-tabs {
+  flex-shrink: 0;
+  max-height: 40%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--vc-space-2, 8px) var(--vc-space-2, 8px) 0;
+  border-bottom: 1px solid var(--vc-border, #333a47);
+}
+.vc-panel-group-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--vc-text-muted, #9aa3b2);
+  padding: var(--vc-space-2, 8px) var(--vc-space-2, 8px) var(--vc-space-1, 4px);
+}
+.vc-panel-tab {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: var(--vc-radius-sm, 6px);
+  background: transparent;
+  color: var(--vc-text, #e8eaf0);
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.vc-panel-tab:hover {
+  background: var(--vc-bg-elevated, #232833);
+}
+.vc-panel-tab-active,
+.vc-panel-tab-active:hover {
+  background: var(--vc-accent, #e5484d);
+  color: var(--vc-accent-contrast, #ffffff);
+}
+.vc-panel-empty {
+  font-size: 12px;
+  color: var(--vc-text-muted, #9aa3b2);
+  padding: var(--vc-space-2, 8px);
+  line-height: 1.5;
+}
+.vc-panel-empty code,
+.vc-panel-hint code {
+  background: var(--vc-bg-elevated, #232833);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-family: var(--vc-font-mono, ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace);
+}
+
+/* ---- body / frames ---- */
+.vc-panel-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--vc-space-3, 12px);
+}
+.vc-panel-frame-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+/* Indeterminate top progress bar — visible while an iframe is loading
+   (frames are white until the server ships bytes, esp. dev servers). */
+.vc-panel-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  background: transparent;
+}
+.vc-panel-loading::before {
+  content: "";
+  display: block;
+  height: 100%;
+  width: 40%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--vc-accent, #e5484d), transparent);
+  animation: vc-panel-loading-slide 1.1s ease-in-out infinite;
+}
+.vc-panel-loading[hidden] {
+  display: none;
+}
+.vc-panel-frame-status {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: rgba(20, 24, 32, .88);
+  color: var(--vc-text-muted, #9aa3b2);
+  font-size: 11px;
+  pointer-events: none;
+}
+.vc-panel-frame-status[data-state="ready"] { color: #8ee6a4; }
+.vc-panel-frame-status[data-state="error"] { color: #ff9c9c; }
+.workspace-panel-tab[data-vc-native-code-editor-tab][aria-selected="true"] { /* active editor tab */ }
+@keyframes vc-panel-loading-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+.vc-panel-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--vc-border, #333a47);
+  border-radius: var(--vc-radius-sm, 6px);
+  background: #ffffff; /* pages bring their own background */
+}
+.vc-panel-frame[hidden] {
+  display: none !important;
+}
+
+/* ---- env dot on tabs (matches session env color) ---- */
+.vc-panel-tab-env-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* ---- offline placeholder (env not running) ---- */
+.vc-panel-env-offline {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vc-space-2, 8px);
+  text-align: center;
+  color: var(--vc-text-muted, #9aa3b2);
+  padding: var(--vc-space-4, 16px);
+}
+.vc-panel-env-offline[hidden] {
+  display: none !important;
+}
+.vc-panel-env-offline-icon {
+  font-size: 28px;
+}
+.vc-panel-env-offline-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--vc-text, #e8eaf0);
+}
+.vc-panel-env-offline-text {
+  margin: 0;
+  font-size: 12px;
+}
+.vc-panel-env-offline code {
+  font-family: var(--vc-font-mono, ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace);
+  font-size: 12px;
+  background: var(--vc-bg-elevated, #232833);
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+.vc-panel-env-offline-retry {
+  margin-top: var(--vc-space-2, 8px);
+  border: 1px solid var(--vc-border, #333a47);
+  border-radius: var(--vc-radius-sm, 6px);
+  background: var(--vc-bg-elevated, #232833);
+  color: var(--vc-text, #e8eaf0);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.vc-panel-env-offline-retry:hover {
+  filter: brightness(1.15);
+}
+
+/* ---- live Medusa admin gate (external link, never inline iframe) ---- */
+.vc-panel-live-admin-gate {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vc-space-2, 8px);
+  text-align: center;
+  color: var(--vc-text-muted, #9aa3b2);
+  padding: var(--vc-space-4, 16px);
+}
+.vc-panel-live-admin-gate[hidden] {
+  display: none !important;
+}
+.vc-panel-live-admin-icon {
+  font-size: 28px;
+}
+.vc-panel-live-admin-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--vc-text, #e8eaf0);
+}
+.vc-panel-live-admin-text {
+  margin: 0;
+  font-size: 12px;
+  max-width: 320px;
+  line-height: 1.5;
+}
+.vc-panel-live-admin-link {
+  margin-top: var(--vc-space-2, 8px);
+  display: inline-block;
+  border-radius: var(--vc-radius-sm, 6px);
+  background: var(--vc-accent, #e5484d);
+  color: var(--vc-accent-contrast, #ffffff);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  text-decoration: none;
+}
+.vc-panel-live-admin-link:hover {
+  filter: brightness(1.12);
+}
+.vc-panel-hint {
+  flex-shrink: 0;
+  margin-top: var(--vc-space-2, 8px);
+  font-size: 11px;
+  color: var(--vc-text-muted, #9aa3b2);
+  line-height: 1.5;
+}

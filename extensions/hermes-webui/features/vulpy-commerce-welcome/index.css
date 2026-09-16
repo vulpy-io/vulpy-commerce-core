@@ -1,0 +1,128 @@
+/* Vulpy Commerce — mission welcome surface (inline).
+ *
+ * Renderer-independent, NO popup: the welcome customizes the native
+ * empty-state surface in the chat pane. Styled against the message renderer's
+ * own classes + CSS custom properties with safe fallbacks. Works in
+ * light/dark and with both native + message-renderer surfaces.
+ */
+
+/* The injected form wrapper — inline, in-flow, fades in after the text. */
+.vulpy-welcome-form-wrap {
+  width: 100%;
+  max-width: 520px;
+  margin: 18px auto 8px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.vulpy-welcome-form-wrap.vulpy-welcome-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.vulpy-welcome-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+.vulpy-welcome-label {
+  font-size: 13px;
+  color: var(--muted, #666);
+}
+.vulpy-welcome-input {
+  font-size: 15px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #ddd);
+  background: var(--surface, #fafafa);
+  color: var(--text, #111);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.vulpy-welcome-input:focus {
+  border-color: var(--accent, #e8842c);
+  box-shadow: 0 0 0 3px rgba(232, 132, 44, 0.2);
+}
+.vulpy-welcome-submit {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent, #e8842c);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+.vulpy-welcome-submit:hover { background: var(--accent-hover, #d4731d); }
+.vulpy-welcome-submit:disabled { opacity: 0.6; cursor: default; }
+.vulpy-welcome-error {
+  font-size: 13px;
+  color: var(--danger, #d33);
+  min-height: 16px;
+}
+
+/* Any-provider link */
+.vulpy-welcome-alt-link {
+  margin-top: 12px;
+  font-size: 13px;
+  background: none;
+  border: none;
+  color: var(--accent, #e8842c);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.vulpy-welcome-alt-link:hover { color: var(--accent-hover, #d4731d); }
+
+/* Body lines + signup CTA (final welcome copy) */
+.vulpy-welcome-body-line {
+  margin: 6px 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.vulpy-welcome-signup {
+  display: inline-block;
+  margin: 6px 0 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent, #e8842c);
+  text-decoration: underline;
+}
+.vulpy-welcome-signup:hover { color: var(--accent-hover, #d4731d); }
+
+/* Custom-provider mode */
+.vulpy-welcome-custom .vulpy-welcome-input {
+  margin-bottom: 4px;
+}
+.vulpy-welcome-test {
+  background: var(--border2, #ddd);
+  color: var(--text, #111);
+}
+.vulpy-welcome-test:hover { background: var(--border, #ccc); }
+
+/* ── Skeleton → brand colors (Vulpy skin layer) ─────────────────────────
+   The renderer's skeleton uses grey currentColor + purple --primary. This
+   stylesheet is part of the Vulpy extension (the skin/overlay layer), so
+   overriding to brand colors HERE is the correct boundary — the renderer
+   stays public/generic. Scoped to the AUI pane; normal specificity (no
+   !important) since our extension stylesheet loads after the renderer's. */
+[data-hermes-assistant-ui-pane] .hermes-skeleton-row {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, #e8842c 14%, transparent) 25%,
+    color-mix(in srgb, #e8842c 26%, transparent) 50%,
+    color-mix(in srgb, #e8842c 14%, transparent) 75%
+  );
+  background-size: 200% 100%;
+}
+[data-hermes-assistant-ui-pane] .hermes-skeleton-msg.hermes-skeleton-user .hermes-skeleton-row {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, #e8842c 30%, transparent) 25%,
+    color-mix(in srgb, #e8842c 50%, transparent) 50%,
+    color-mix(in srgb, #e8842c 30%, transparent) 75%
+  );
+  background-size: 200% 100%;
+}

@@ -1,0 +1,11 @@
+use_default_settings: true
+server:
+  bind_address: 0.0.0.0
+  port: 8080
+  base_url: "http://searxng:8080/"
+  secret_key: "__SEARXNG_SECRET__"
+  limiter: false
+search:
+  formats:
+    - html
+    - json

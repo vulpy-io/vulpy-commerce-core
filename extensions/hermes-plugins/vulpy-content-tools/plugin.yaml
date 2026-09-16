@@ -1,0 +1,10 @@
+name: vulpy-content-tools
+kind: standalone
+version: 1.0.0
+description: Vulpy Commerce content/catalog operator tools — Payload CMS upsert + media upload + Medusa catalog seed/import + category image. Deterministic, idempotent, chat-guided content management for the store missions.
+author: Fox / Vulpy Commerce
+provides_tools:
+  - payload_upsert
+  - media_upload
+  - catalog_seed
+  - category_set_image

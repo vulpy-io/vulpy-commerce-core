@@ -1,0 +1,182 @@
+# Application-level Hermes / Fox-in-the-Box — one agent for all environments.
+# Managed by: pnpm vulpy hermes up|down|…
+# Network: external, app-scoped network shared only with this app's ingress and
+# private environment gateways.
+#
+# Heavy host trees (node_modules, .data, build caches) are either skipped by
+# scripts/hermes-fox-entrypoint.sh (pruned chown) or hidden behind named volumes
+# so Fox never walks/mutates them on the bind mount.
+
+services:
+  hermes:
+    build:
+      context: .
+      dockerfile: Dockerfile.hermes
+    # Released Core/Pro installs set VULPY_HERMES_IMAGE to their GHCR image.
+    # Local development leaves it unset and uses the explicit local fallback.
+    image: ${VULPY_HERMES_IMAGE:-vulpy-hermes:local}
+    restart: unless-stopped
+    working_dir: /app/workspace
+    entrypoint: ["/bin/bash", "/app/workspace/scripts/hermes-fox-entrypoint.sh"]
+    group_add:
+      - "${HOST_GID:-1000}"
+    environment:
+      HOST_UID: ${HOST_UID:-1000}
+      HOST_GID: ${HOST_GID:-1000}
+      # Fox's keyless default web search (SearXNG sidecar, auto-detected by
+      # Hermes when SEARXNG_URL is present — no web.backend pin).
+      SEARXNG_URL: "http://searxng:8080"
+      # Vulpy Commerce WebUI extension runtime config + CSP iframe allowlist
+      # (see environments/hermes/.env.example). Passthrough from the host env
+      # file so the entrypoint can render vulpy-commerce.config.json and the
+      # WebUI server can allow external side-panel iframe origins. The dev
+      # shop/api ports are passed through too so the side panel's derived
+      # iframe tabs use the ACTUAL ports, not hardcoded 3000/9000. Resolution
+      # order: VULPY_SHOP_PORT / VULPY_API_PORT, else HERMES_DEV_STOREFRONT_PORT
+      # / HERMES_DEV_MEDUSA_PORT, else 3000/9000. NOTE: compose reads the hermes
+      # env file only — a port override placed solely in environments/dev/.env
+      # is NOT visible here; set it in environments/hermes/.env (or root .env).
+      VULPY_WEBUI_IFRAMES: ${VULPY_WEBUI_IFRAMES:-[]}
+      vulpy_codeeditor_enabled: ${vulpy_codeeditor_enabled:-true}
+      VULPY_WEBUI_SHOP_PORT: ${VULPY_SHOP_PORT:-${HERMES_DEV_STOREFRONT_PORT:-3000}}
+      VULPY_WEBUI_API_PORT: ${VULPY_API_PORT:-${HERMES_DEV_MEDUSA_PORT:-9000}}
+      HERMES_WEBUI_CSP_FRAME_EXTRA: ${HERMES_WEBUI_CSP_FRAME_EXTRA:-}
+      HERMES_WEBUI_CSP_FRAME_ANCESTORS_EXTRA: ${HERMES_WEBUI_CSP_FRAME_ANCESTORS_EXTRA:-}
+      HERMES_WEBUI_CSP_CONNECT_EXTRA: ${HERMES_WEBUI_CSP_CONNECT_EXTRA:-}
+      # Extension sidecar proxy response cap (bytes). Default 8 MiB inside the
+      # WebUI; override without rebuilding (see .env.example).
+      HERMES_WEBUI_SIDECAR_MAX_RESPONSE_BYTES: ${HERMES_WEBUI_SIDECAR_MAX_RESPONSE_BYTES:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      # Host port defaults to 8787 (same as container). Override HERMES_PORT / HERMES_BIND.
+      - "${HERMES_BIND:-127.0.0.1}:${HERMES_PORT:-8787}:8787"
+    expose:
+      - "8787"
+    volumes:
+      - ${HERMES_DATA_DIR}:/data
+      - ./.hermes/skills:/data/data/hermes/skills
+      - ./:/app/workspace
+      # Hide runtime/data trees from the bind mount (empty volumes; fast chown).
+      # Host node_modules stay visible so the agent can use the same install.
+      - hermes_hide_data:/app/workspace/.data
+      - hermes_hide_storefront_next:/app/workspace/apps/storefront/.next
+      - hermes_hide_medusa_build:/app/workspace/apps/medusa-backend/.medusa
+      - hermes_hide_turbo:/app/workspace/.turbo
+      # Guardrail: live/staging secrets and lifecycle stay host-only. The agent
+      # gets empty volumes instead of the host environments/live|staging dirs.
+      - hermes_hide_env_live:/app/workspace/environments/live
+      - hermes_hide_env_staging:/app/workspace/environments/staging
+    networks:
+      default:
+      vulpy-app:
+        aliases:
+          - hermes
+
+  gitea:
+    # Internal Gitea sidecar — the invisible relay for the env-push promotion
+    # pipeline. Fox pushes the workspace HEAD here over the compose network;
+    # the target environment (staging/live) pulls from it on the host. No host
+    # port binding — internal only. Access is via http://gitea:3300.
+    image: gitea/gitea:1-rootless
+    container_name: vulpy-gitea-${VULPY_APP_ID:-default}
+    environment:
+      - GITEA__database__DB_TYPE=sqlite3
+      - GITEA__server__ROOT_URL=http://gitea:3300
+      - GITEA__server__HTTP_PORT=3300
+      - GITEA__server__DISABLE_SSH=true
+      - GITEA__service__DISABLE_REGISTRATION=true
+      - GITEA__security__INSTALL_LOCK=true
+    volumes:
+      - gitea-data:/var/lib/gitea
+      - gitea-config:/etc/gitea
+    networks:
+      - default
+    restart: unless-stopped
+
+  searxng:
+    # Self-hosted meta search — Fox's keyless default web search backend.
+    # The official image populates the default settings.yml (incl. the JSON
+    # format) on first boot, so no settings file is shipped.
+    image: searxng/searxng
+    restart: unless-stopped
+    # Intentionally NOT published to the host: Fox reaches it at
+    # http://searxng:8080 over the compose network (SEARXNG_URL above), and
+    # multi-tenant hosts must not fight over a loopback port. Debug the UI via
+    # `docker compose -f docker-compose.hermes.yml run --rm -p 8080:8080 searxng`
+    # or an ad-hoc port-forward; do not add a permanent ports: mapping here.
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-}
+      SEARXNG_BASE_URL: "http://searxng:8080/"
+    volumes:
+      - searxng_data:/etc/searxng
+      - ./docker/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    # No networks: key → default network only (same network as the hermes
+    # service, so Fox reaches it at http://searxng:8080). Intentionally NOT on
+    # the external vulpy-app network.
+
+  code-server:
+    # VS Code in the browser — embedded as a side-panel iframe tab in the
+    # WebUI (see environments/hermes/.env: VULPY_WEBUI_IFRAMES editor entry +
+    # HERMES_WEBUI_CSP_FRAME_EXTRA). Pinned 2026-09-01: codercom/code-server:4.135.0.
+    image: codercom/code-server:4.135.0
+    container_name: vulpy-hermes-codeserver-${VULPY_APP_ID:-default}
+    restart: unless-stopped
+    # Shares the Hermes container's network namespace, so the Fox Tailscale
+    # sidecar (network_mode: service:hermes) can `tailscale serve` it the same
+    # way it serves the billing preview. No host port mapping needed — the
+    # operator reaches it via https://vulpy-commerce-private.tail873f17.ts.net:8080.
+    network_mode: service:hermes
+    environment:
+      # Auth is password-gated (never --auth none). PASSWORD is optional in
+      # the image; we set it explicitly so auth is always on.
+      PASSWORD: ${VULPY_CODESERVER_PASSWORD:-}
+      vulpy_codeeditor_enabled: ${vulpy_codeeditor_enabled:-true}
+      # The operator's browser sees the WebUI origin — keep code-server's own
+      # CSP permissive so the VS Code service worker + websockets work when
+      # embedded. The WebUI's own CSP (frame-src) still governs embedding.
+      DISABLE_TELEMETRY: "true"
+      # code-server runs as uid ${HOST_UID} but the image's default $HOME is /
+      # (not writable by a non-root user) → it crashes at startup with
+      # `EACCES: permission denied, mkdir '/.config'`. Point HOME at the
+      # workspace bind mount (writable by uid 1001) so it can create
+      # ~/.config and ~/.local/share/code-server.
+      HOME: /app/workspace
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    volumes:
+      # The SAME checkout Fox edits — code-server edits are live on the host
+      # instantly (bind mount). /app/workspace is the workspace root.
+      - ./:/app/workspace
+    working_dir: /app/workspace
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        if [ "${vulpy_codeeditor_enabled:-true}" = "false" ] || [ "${vulpy_codeeditor_enabled:-true}" = "0" ]; then
+          echo "code-server disabled by vulpy_codeeditor_enabled";
+          exec sleep infinity;
+        fi;
+        umask 0002;
+        exec code-server
+        --bind-addr=127.0.0.1:8080
+        --auth=password
+        --disable-telemetry
+        --disable-update-check
+        --disable-workspace-trust
+        /app/workspace
+    # No networks: key → default network only (same netns as hermes).
+
+volumes:
+  hermes_hide_data:
+  hermes_hide_storefront_next:
+  hermes_hide_medusa_build:
+  hermes_hide_turbo:
+  hermes_hide_env_live:
+  hermes_hide_env_staging:
+  searxng_data:
+  gitea-data:
+  gitea-config:
+
+networks:
+  vulpy-app:
+    external: true
+    name: ${VULPY_APP_NETWORK:-vulpy-app-vulpy-commerce}

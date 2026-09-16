@@ -1,0 +1,74 @@
+{
+  "name": "vulpy-commerce-template",
+  "private": true,
+  "scripts": {
+    "bootstrap": "bash scripts/init-project.sh",
+    "bootstrap:env": "bash scripts/init-project.sh --env-only",
+    "db:up": "bash scripts/compose.sh up -d postgres redis",
+    "db:hermes:up": "bash scripts/vulpy-hermes.sh up",
+    "db:hermes:down": "bash scripts/vulpy-hermes.sh down",
+    "db:matomo:up": "bash scripts/dev-matomo.sh up",
+    "db:matomo:down": "bash scripts/dev-matomo.sh down",
+    "db:down": "bash scripts/compose.sh down",
+    "db:backup": "bash scripts/db-backup.sh",
+    "db:reset": "bash scripts/db-reset.sh",
+    "db:reseed": "bash scripts/db-reseed.sh",
+    "store:reseed": "bash scripts/store-reseed.sh",
+    "db:init-payload": "bash scripts/init-payload-db.sh",
+    "build": "turbo run build",
+    "dev": "bash scripts/dev.sh",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch --parallel",
+    "test:coverage": "turbo run test:coverage",
+    "test:webui": "bash scripts/tests/hermes-fox-entrypoint.test.sh && bash scripts/tests/hermes-webui-manifest.test.sh && bash scripts/tests/hermes-webui-media-contract.test.sh && bash scripts/tests/vulpy-fox-tailscale-status.smoke.sh",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "typecheck": "turbo run typecheck",
+    "verify:docker:medusa-packaging": "bash scripts/verify-medusa-docker-packaging.sh",
+    "typegen": "turbo run typegen",
+    "graphify:setup": "bash scripts/setup-graphify.sh",
+    "graphify:build": "bash scripts/graphify.sh build",
+    "graphify:update": "bash scripts/graphify.sh update",
+    "graphify:query": "bash scripts/graphify.sh query",
+    "graphify:wiki": "bash scripts/graphify.sh wiki",
+    "graphify:watch": "bash scripts/graphify.sh watch",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.11",
+    "@playwright/test": "1.55.0",
+    "husky": "^9.1.7",
+    "impeccable": "^3.6.0",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.7.4",
+    "turbo": "^2.7.5",
+    "typescript": "5.9.2",
+    "ultracite": "7.0.12"
+  },
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": "^6.4.1",
+      "undici": "^6.21.0"
+    },
+    "packageExtensions": {
+      "@medusajs/medusa@*": {
+        "dependencies": {
+          "zod": "^3.25.0"
+        }
+      }
+    },
+    "neverBuiltDependencies": [
+      "msgpackr-extract"
+    ]
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
+      "biome check --write --unsafe --no-errors-on-unmatched"
+    ],
+    "!extensions/hermes-webui/message-renderer.js": []
+  }
+}

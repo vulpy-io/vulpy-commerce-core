@@ -1,0 +1,10 @@
+# Security checksums for security-critical files
+# Generated: 2026-09-16
+# Purpose: Detect agent tampering before container starts
+#
+# If these checksums don't match at entrypoint, the container exits.
+# To update: regenerate with `python3 scripts/generate-checksums.py`
+
+scripts/vulpy-agent-cmd-server.py:sha256:d1b1059947485d3b3e842a9ad2ed7837ea2113b266f776a9465a8f13e3fd6d6d
+scripts/hermes-fox-entrypoint.sh:sha256:77515389e0b8e26856b8a9556a986db51c35a061f3aff267bd25356b960654b3
+docker-compose.hermes.yml:sha256:e3fd0c297dced250cc6cfa3deb78387e9e1cdf8b724e48584e9987d200b55e18

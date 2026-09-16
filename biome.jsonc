@@ -1,0 +1,214 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/astro",
+    "ultracite/biome/react"
+  ],
+  "files": {
+    "includes": [
+      "!!**/.hermes",
+      "!!**/.hermes",
+      "!!extensions/hermes-webui/message-renderer.js",
+      "!!impeccable",
+      "!!design/concepts"
+    ]
+  },
+  "linter": {
+    "rules": {
+      "suspicious": {
+        "noExplicitAny": "off"
+      },
+      "nursery": {
+        "useSortedClasses": "error"
+      },
+      "a11y": {
+        "noNoninteractiveElementInteractions": "off",
+        "noStaticElementInteractions": "off",
+        "useKeyWithClickEvents": "off"
+      }
+    }
+  },
+  // Workaround for Biome bug: html.experimentalFullSupportEnabled (from ultracite/biome/astro)
+  // causes --write to insert a blank line after --- in .astro frontmatter on every run.
+  "html": {
+    "experimentalFullSupportEnabled": false
+  },
+  "formatter": {
+    "includes": ["!**/*.astro"]
+  },
+  "overrides": [
+    {
+      // Jest unit specs use globals (describe/it/expect) without imports.
+      "includes": [
+        "**/*.unit.spec.ts",
+        "**/*.unit.spec.tsx",
+        "**/__tests__/**/*.{ts,tsx,js,jsx}"
+      ],
+      "javascript": {
+        "globals": [
+          "afterAll",
+          "afterEach",
+          "beforeAll",
+          "beforeEach",
+          "describe",
+          "expect",
+          "it",
+          "jest",
+          "test"
+        ]
+      }
+    },
+    {
+      // WebUI extension: injected browser scripts are deliberately dense
+      // (string-hostile bundles), and the island/tests are gated by their own
+      // vitest suite (30/30) + real-browser E2E — not by Biome style rules.
+      "includes": ["extensions/hermes-webui/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNestedTernary": "off",
+            "noNonNullAssertion": "off",
+            "useDefaultSwitchClause": "off"
+          },
+          "suspicious": {
+            "noNonNullAssertedOptionalChain": "off",
+            "noEmptyBlockStatements": "off",
+            "noAssignInExpressions": "off",
+            "noAlert": "off",
+            "useAwait": "off",
+            "useIterableCallbackReturn": "off"
+          },
+          "correctness": {
+            "noNestedComponentDefinitions": "off",
+            "noUnusedFunctionParameters": "off",
+            "useHookAtTopLevel": "off",
+            "noUndeclaredVariables": "off"
+          },
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off",
+            "noForEach": "off"
+          },
+          "performance": {
+            "useTopLevelRegex": "off"
+          },
+          "a11y": {
+            "noSvgWithoutTitle": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/storefront/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": "off",
+            "useConsistentTypeDefinitions": "off",
+            "noExportedImports": "off",
+            "noNestedTernary": "off",
+            "noNonNullAssertion": "off"
+          },
+          "a11y": {
+            "useValidAnchor": "off",
+            "noSvgWithoutTitle": "off",
+            "useButtonType": "off"
+          },
+          "suspicious": {
+            "noArrayIndexKey": "off",
+            "noShadowRestrictedNames": "off",
+            "noRedeclare": "off"
+          },
+          "performance": {
+            "noBarrelFile": "off"
+          },
+          "correctness": {
+            "useExhaustiveDependencies": "off",
+            "noUnusedFunctionParameters": "off",
+            "noUnusedVariables": "off"
+          },
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/storefront/**/*.css"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnknownAtRules": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/payload-types.ts", "**/importMap.js"],
+      "linter": {
+        "enabled": false
+      },
+      "formatter": {
+        "enabled": false
+      },
+      "assist": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": [
+        "packages/medusa-plugin-email/src/modules/**/migrations/**",
+        "packages/medusa-plugin-email/src/workflows/index.ts",
+        "apps/medusa-backend/src/modules/**/migrations/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": "off"
+          },
+          "performance": {
+            "noBarrelFile": "off"
+          },
+          "suspicious": {
+            "useAwait": "off"
+          }
+        }
+      }
+    },
+    {
+      // Release stubs are generated Core replacement modules — PascalCase
+      // components, barrel re-exports, and async no-op services.
+      "includes": ["release/stubs/**"],
+      "linter": {
+        "rules": {
+          "style": { "useFilenamingConvention": "off" },
+          "performance": { "noBarrelFile": "off" },
+          "suspicious": { "useAwait": "off", "noEmptyBlockStatements": "off" }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            // Biome doesn't understand Astro frontmatter scoping — variables
+            // defined between --- fences appear "undeclared" in the template.
+            "noUndeclaredVariables": "off",
+            // Astro doesn't use a virtual DOM; keys on iterable elements are unnecessary.
+            "useJsxKeyInIterable": "off"
+          },
+          "suspicious": {
+            // False positive: React components used in Astro templates accept
+            // className as a prop — this is correct for the React integration.
+            "noReactSpecificProps": "off"
+          },
+          "a11y": {
+            // Biome can't detect <slot /> as valid anchor content in Astro.
+            "useAnchorContent": "off"
+          }
+        }
+      }
+    }
+  ]
+}
